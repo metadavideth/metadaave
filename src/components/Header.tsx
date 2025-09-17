@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from "react"
 
-// Mock Farcaster data for development
+// Mock Farcaster data for development/previewer
 const mockFarcasterUser = {
   fid: 123,
-  username: "user",
-  displayName: "User",
+  username: "farcaster_user",
+  displayName: "Farcaster User",
   address: "0x1234567890abcdef1234567890abcdef12345678"
 }
 
@@ -19,8 +19,8 @@ function shortenAddress(address?: string) {
 function isFarcasterEnvironment() {
   if (typeof window === "undefined") return false
   
-  // Check for Farcaster SDK
-  if ((window as any).farcaster) return true
+  // Check for Farcaster SDK global
+  if ((window as any).FarcasterMiniApp) return true
   
   // Check for Farcaster previewer or iframe context
   if (window.location.hostname.includes("farcaster") || 
@@ -28,21 +28,16 @@ function isFarcasterEnvironment() {
       window.location.search.includes("preview") ||
       window.parent !== window) return true
   
-  // Check for Farcaster user agent or referrer
-  if (navigator.userAgent.includes("farcaster") || 
-      document.referrer.includes("farcaster")) return true
-  
   return false
 }
 
-// Get Farcaster SDK instance (assumes it's already initialized by App)
-async function getFarcasterSDK() {
+// Get Farcaster SDK instance from global window object
+function getFarcasterSDK() {
   if (typeof window === "undefined") return null
   
   try {
-    if (isFarcasterEnvironment()) {
-      const { sdk } = await import("@farcaster/miniapp-sdk")
-      return sdk
+    if ((window as any).FarcasterMiniApp) {
+      return (window as any).FarcasterMiniApp
     }
   } catch (error) {
     console.warn("Failed to get Farcaster SDK:", error)
@@ -65,21 +60,25 @@ export function Header() {
       try {
         setIsLoading(true)
         
-        // Get Farcaster SDK (already initialized by App)
-        const sdk = await getFarcasterSDK()
+        // Get Farcaster SDK
+        const sdk = getFarcasterSDK()
         
-        if (sdk) {
+        if (sdk && isFarcasterEnvironment()) {
           // We're in a Farcaster environment with SDK
           try {
-            // Get user context
-            const context = await sdk.context.get()
-            if (mounted && context?.user) {
-              setUsername(context.user.username || "")
-              setAddress(context.user.address || "")
-              setIsConnected(true)
+            // Check if user is already authenticated
+            const isAuthenticated = await sdk.actions.isAuthenticated()
+            if (isAuthenticated) {
+              // Get user data
+              const userData = await sdk.actions.getUserData()
+              if (mounted && userData) {
+                setUsername(userData.username || "")
+                setAddress(userData.address || "")
+                setIsConnected(true)
+              }
             }
           } catch (sdkError) {
-            console.warn("SDK context error:", sdkError)
+            console.warn("SDK authentication check error:", sdkError)
             // Fallback to mock data if SDK fails
             if (mounted) {
               setUsername(mockFarcasterUser.username)
@@ -88,7 +87,7 @@ export function Header() {
             }
           }
         } else {
-          // Development mode - use mock data
+          // Development mode or previewer - use mock data
           if (mounted) {
             setUsername(mockFarcasterUser.username)
             setAddress(mockFarcasterUser.address)
@@ -112,28 +111,34 @@ export function Header() {
     try {
       setIsLoading(true)
       
-      // Get Farcaster SDK (already initialized by App)
-      const sdk = await getFarcasterSDK()
+      // Get Farcaster SDK
+      const sdk = getFarcasterSDK()
       
-      if (sdk) {
+      if (sdk && isFarcasterEnvironment()) {
         // We're in a Farcaster environment with SDK
         try {
-          // Use QuickAuth for authentication
-          const auth = await sdk.quickAuth.signIn()
-          if (auth?.user) {
-            setUsername(auth.user.username || "")
-            setAddress(auth.user.address || "")
-            setIsConnected(true)
+          // Use authenticate method for sign-in
+          const authResult = await sdk.actions.authenticate()
+          if (authResult && authResult.success) {
+            // Get user data after successful authentication
+            const userData = await sdk.actions.getUserData()
+            if (userData) {
+              setUsername(userData.username || "")
+              setAddress(userData.address || "")
+              setIsConnected(true)
+            }
+          } else {
+            throw new Error("Authentication failed")
           }
         } catch (sdkError) {
           console.warn("SDK auth error:", sdkError)
-          // Fallback to mock data if SDK fails
+          // Fallback to mock data if SDK fails (for previewer)
           setUsername(mockFarcasterUser.username)
           setAddress(mockFarcasterUser.address)
           setIsConnected(true)
         }
       } else {
-        // Development mode
+        // Development mode or previewer - use mock data
         setUsername(mockFarcasterUser.username)
         setAddress(mockFarcasterUser.address)
         setIsConnected(true)
@@ -190,7 +195,7 @@ export function Header() {
               </div>
               <button
                 onClick={handleDisconnect}
-                className="bg-secondary text-secondary-foreground border border-border rounded-lg px-4 py-2 text-sm"
+                className="bg-secondary text-secondary-foreground border border-border rounded-lg px-4 py-2 text-sm hover:bg-secondary/80 transition-colors"
               >
                 Disconnect
               </button>
@@ -199,9 +204,9 @@ export function Header() {
             <button
               onClick={handleConnect}
               disabled={isLoading}
-              className="bg-primary text-white rounded-lg px-4 py-2 text-sm disabled:opacity-60 disabled:cursor-not-allowed"
+              className="bg-primary text-white rounded-lg px-4 py-2 text-sm disabled:opacity-60 disabled:cursor-not-allowed hover:bg-primary/90 transition-colors"
             >
-              {isLoading ? "Connecting..." : "Connect with Farcaster"}
+              {isLoading ? "Loading..." : "Connect with Farcaster"}
             </button>
           )}
         </div>
