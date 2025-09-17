@@ -15,4 +15,7 @@ export default defineConfig({
   define: {
     global: "globalThis",
   },
+  optimizeDeps: {
+    exclude: ['@farcaster/miniapp-sdk']
+  }
 })

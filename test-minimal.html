@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minimal Farcaster Test</title>
+    <meta name="fc:miniapp" content='{"version":"1","imageUrl":"https://metadaave-1kgvwla1x-davids-projects-8520d68f.vercel.app/placeholder-logo.png","button":{"title":"Open metadaave","action":{"type":"launch_frame","name":"metadaave","url":"https://metadaave-1kgvwla1x-davids-projects-8520d68f.vercel.app","splashImageUrl":"https://metadaave-1kgvwla1x-davids-projects-8520d68f.vercel.app/placeholder-logo.png","splashBackgroundColor":"#FFFFFF"}}}' />
+</head>
+<body>
+    <h1>Minimal Farcaster Test</h1>
+    <p>This is a minimal test to see if the SDK works at all.</p>
+    <div id="status">Loading...</div>
+    
+    <script type="module">
+        console.log('Starting minimal test...')
+        
+        try {
+            // Try to import the SDK
+            const { sdk } = await import('https://esm.sh/@farcaster/miniapp-sdk')
+            console.log('SDK imported successfully:', sdk)
+            
+            // Check if actions.ready exists
+            if (sdk && sdk.actions && sdk.actions.ready) {
+                console.log('sdk.actions.ready exists, calling it...')
+                document.getElementById('status').textContent = 'SDK found, calling ready...'
+                
+                // Call ready
+                await sdk.actions.ready()
+                console.log('sdk.actions.ready() called successfully!')
+                document.getElementById('status').textContent = 'SUCCESS: sdk.actions.ready() called!'
+            } else {
+                console.error('sdk.actions.ready not found')
+                document.getElementById('status').textContent = 'ERROR: sdk.actions.ready not found'
+            }
+        } catch (error) {
+            console.error('Error:', error)
+            document.getElementById('status').textContent = 'ERROR: ' + error.message
+        }
+    </script>
+</body>
+</html>
+

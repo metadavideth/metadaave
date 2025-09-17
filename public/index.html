@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Farcaster Test</title>
+    <meta name="fc:miniapp" content='{"version":"1","imageUrl":"https://metadaave-krvs19rka-davids-projects-8520d68f.vercel.app/placeholder-logo.png","button":{"title":"Open metadaave","action":{"type":"launch_frame","name":"metadaave","url":"https://metadaave-krvs19rka-davids-projects-8520d68f.vercel.app","splashImageUrl":"https://metadaave-krvs19rka-davids-projects-8520d68f.vercel.app/placeholder-logo.png","splashBackgroundColor":"#FFFFFF"}}}' />
+</head>
+<body>
+    <h1>Farcaster Test</h1>
+    <p>This is a simple test to see if the SDK works at all.</p>
+    <div id="status">Loading...</div>
+    
+    <script>
+        console.log('Starting simple test...')
+        
+        // Try to access the SDK directly from window
+        if (window.farcaster && window.farcaster.sdk) {
+            console.log('Found window.farcaster.sdk:', window.farcaster.sdk)
+            document.getElementById('status').textContent = 'Found window.farcaster.sdk'
+        } else {
+            console.log('No window.farcaster.sdk found')
+            document.getElementById('status').textContent = 'No window.farcaster.sdk found'
+        }
+        
+        // Try to call ready if it exists
+        if (window.farcaster && window.farcaster.sdk && window.farcaster.sdk.actions && window.farcaster.sdk.actions.ready) {
+            console.log('Calling window.farcaster.sdk.actions.ready()...')
+            try {
+                window.farcaster.sdk.actions.ready()
+                console.log('SUCCESS: window.farcaster.sdk.actions.ready() called!')
+                document.getElementById('status').textContent = 'SUCCESS: ready() called!'
+            } catch (error) {
+                console.error('ERROR calling ready():', error)
+                document.getElementById('status').textContent = 'ERROR: ' + error.message
+            }
+        } else {
+            console.log('window.farcaster.sdk.actions.ready not available')
+            document.getElementById('status').textContent = 'ready() not available'
+        }
+        
+        // Also try dynamic import
+        setTimeout(async () => {
+            try {
+                console.log('Trying dynamic import...')
+                const { sdk } = await import('https://esm.sh/@farcaster/miniapp-sdk')
+                console.log('Dynamic import successful:', sdk)
+                
+                if (sdk && sdk.actions && sdk.actions.ready) {
+                    console.log('Calling dynamic sdk.actions.ready()...')
+                    await sdk.actions.ready()
+                    console.log('SUCCESS: Dynamic sdk.actions.ready() called!')
+                    document.getElementById('status').textContent = 'SUCCESS: Dynamic ready() called!'
+                } else {
+                    console.log('Dynamic sdk.actions.ready not available')
+                }
+            } catch (error) {
+                console.error('Dynamic import failed:', error)
+                document.getElementById('status').textContent = 'Dynamic import failed: ' + error.message
+            }
+        }, 1000)
+    </script>
+</body>
+</html>
+

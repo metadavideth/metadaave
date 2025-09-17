@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Farcaster Test</title>
+    <meta name="fc:miniapp" content='{"version":"1","imageUrl":"https://metadaave-o0lycx2b7-davids-projects-8520d68f.vercel.app/placeholder-logo.png","button":{"title":"Open metadaave","action":{"type":"launch_frame","name":"metadaave","url":"https://metadaave-o0lycx2b7-davids-projects-8520d68f.vercel.app","splashImageUrl":"https://metadaave-o0lycx2b7-davids-projects-8520d68f.vercel.app/placeholder-logo.png","splashBackgroundColor":"#FFFFFF"}}}' />
+</head>
+<body>
+    <h1>Simple Farcaster Test</h1>
+    <p>This is a test to see if the SDK works at all.</p>
+    
+    <script type="module">
+        import { sdk } from 'https://esm.sh/@farcaster/miniapp-sdk'
+        
+        console.log('SDK imported:', sdk)
+        
+        // Call actions.ready() immediately
+        try {
+            console.log('Calling sdk.actions.ready()...')
+            await sdk.actions.ready()
+            console.log('sdk.actions.ready() called successfully!')
+        } catch (error) {
+            console.error('Error calling sdk.actions.ready():', error)
+        }
+    </script>
+</body>
+</html>
+

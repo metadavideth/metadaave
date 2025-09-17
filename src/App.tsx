@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Header } from "./components/Header"
 import { AssetSelector } from "./components/AssetSelector"
 import { ActionTabs } from "./components/ActionTabs"
@@ -18,6 +18,19 @@ function App() {
     token: string
   } | null>(null)
   const [selectedToken, setSelectedToken] = useState<Token>(AAVE_V3_BASE_TOKENS[0])
+
+  // Initialize Farcaster SDK when component mounts
+  useEffect(() => {
+    if (typeof window !== 'undefined' && (window as any).FarcasterMiniApp) {
+      const sdk = (window as any).FarcasterMiniApp
+      console.log("App: Farcaster SDK available:", sdk)
+      
+      // The SDK is already initialized in main.tsx, so we just need to use it
+      if (sdk.actions) {
+        console.log("App: Farcaster SDK actions available:", sdk.actions)
+      }
+    }
+  }, [])
 
   const handleTransactionSuccess = (action: string, amount: string, token: string) => {
     setSocialModalData({ action, amount, token })
