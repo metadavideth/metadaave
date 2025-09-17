@@ -3,6 +3,7 @@ import { useAccount } from 'wagmi'
 import { createPublicClient, http, formatUnits, erc20Abi } from 'viem'
 import { base } from 'viem/chains'
 import { AAVE_V3_BASE_TOKENS } from '../data/tokens'
+import { useEnrichedTokens } from './useAaveData'
 import type { Token } from '../types'
 
 // Create a public client for Base
@@ -109,5 +110,3 @@ export function useTokensWithBalances() {
   }
 }
 
-// Re-export the enriched tokens hook
-export { useEnrichedTokens } from './useAaveData'
