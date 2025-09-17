@@ -5,6 +5,12 @@ export interface Token {
   apy: string
   balance: string
   address: string
+  // Real-time data fields
+  supplyAPY?: number
+  borrowAPY?: number
+  userBalance?: string
+  userBalanceFormatted?: string
+  decimals?: number
 }
 
 export interface WalletData {
