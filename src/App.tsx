@@ -11,8 +11,6 @@ import { AAVE_V3_BASE_TOKENS } from "./data/tokens"
 import type { Token } from "./types"
 
 function App() {
-  const [isConnected, setIsConnected] = useState(false)
-  const [walletAddress, setWalletAddress] = useState("")
   const [showSocialModal, setShowSocialModal] = useState(false)
   const [socialModalData, setSocialModalData] = useState<{
     action: string
@@ -20,12 +18,6 @@ function App() {
     token: string
   } | null>(null)
   const [selectedToken, setSelectedToken] = useState<Token>(AAVE_V3_BASE_TOKENS[0])
-
-  const handleConnect = () => {
-    // Mock wallet connection
-    setIsConnected(true)
-    setWalletAddress("0x123...abcd")
-  }
 
   const handleTransactionSuccess = (action: string, amount: string, token: string) => {
     setSocialModalData({ action, amount, token })
@@ -39,7 +31,7 @@ function App() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <div className="max-w-md mx-auto min-h-screen flex flex-col">
-        <Header isConnected={isConnected} walletAddress={walletAddress} onConnect={handleConnect} />
+        <Header />
 
         <main className="flex-1 p-4 space-y-6">
           <AssetSelector selectedToken={selectedToken} onTokenSelect={handleTokenSelect} />
