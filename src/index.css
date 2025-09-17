@@ -1,0 +1,91 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+@layer base {
+  :root {
+    /* Neutral light theme (no brown) */
+    --background: 0 0% 100%;
+    --foreground: 222 47% 11%; /* slate-900 */
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 220 100% 50%; /* #0052FF */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 40% 96%; /* slate-100 */
+    --secondary-foreground: 222 47% 11%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 46%; /* slate-500 */
+    --accent: 210 40% 96%;
+    --accent-foreground: 222 47% 11%;
+    --destructive: 0 84% 60%; /* red-500 */
+    --destructive-foreground: 0 0% 100%;
+    --border: 214 32% 91%; /* slate-200 */
+    --input: 214 32% 91%;
+    --ring: 220 100% 50%;
+    --radius: 0.5rem;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    @apply bg-background text-foreground;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    font-family: "Inter", system-ui, sans-serif;
+  }
+
+  #root {
+    @apply bg-background text-foreground min-h-screen;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-base-primary hover:bg-base-primary/90 text-white font-medium py-2 px-4 rounded-lg transition-colors;
+  }
+
+  .btn-secondary {
+    @apply bg-card hover:bg-card/80 text-card-foreground font-medium py-2 px-4 rounded-lg border border-border transition-colors;
+  }
+
+  .card {
+    @apply bg-card border border-border rounded-xl p-4 text-card-foreground;
+  }
+
+  .token-button {
+    @apply bg-white border border-border rounded-lg p-3 transition-all text-card-foreground;
+    /* Allow variant classes (e.g., bg-primary, text-white) to override these defaults */
+    background-color: hsl(0 0% 100%);
+    color: hsl(0 0% 0%);
+  }
+
+  .input-field {
+    @apply bg-background border border-border rounded-lg px-3 py-2 text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent;
+  }
+}
+
+/* --- quick background fix --- */
+:root {
+  /* make bg-background resolve to white */
+  --background: 0 0% 100%;
+  --foreground: 26 29 38; /* matches #1A1D26, a dark gray */
+}
+
+/* if your components use bg-background via tokens, this makes it white */
+html, body {
+  background-color: hsl(var(--background));
+}
+
+/* (optional) if something uses the utility class directly */
+.bg-background { background-color: hsl(var(--background)); }
+.text-foreground { color: hsl(var(--foreground)); }

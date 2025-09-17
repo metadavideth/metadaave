@@ -1,0 +1,65 @@
+"use client"
+
+import { useState } from "react"
+import { Header } from "./components/Header"
+import { AssetSelector } from "./components/AssetSelector"
+import { ActionTabs } from "./components/ActionTabs"
+import { Dashboard } from "./components/Dashboard"
+import { SocialModal } from "./components/SocialModal"
+import { SecurityDisclaimer } from "./components/SecurityDisclaimer"
+import { AAVE_V3_BASE_TOKENS } from "./data/tokens"
+import type { Token } from "./types"
+
+function App() {
+  const [isConnected, setIsConnected] = useState(false)
+  const [walletAddress, setWalletAddress] = useState("")
+  const [showSocialModal, setShowSocialModal] = useState(false)
+  const [socialModalData, setSocialModalData] = useState<{
+    action: string
+    amount: string
+    token: string
+  } | null>(null)
+  const [selectedToken, setSelectedToken] = useState<Token>(AAVE_V3_BASE_TOKENS[0])
+
+  const handleConnect = () => {
+    // Mock wallet connection
+    setIsConnected(true)
+    setWalletAddress("0x123...abcd")
+  }
+
+  const handleTransactionSuccess = (action: string, amount: string, token: string) => {
+    setSocialModalData({ action, amount, token })
+    setShowSocialModal(true)
+  }
+
+  const handleTokenSelect = (token: Token) => {
+    setSelectedToken(token)
+  }
+
+  return (
+    <div className="min-h-screen bg-background text-foreground">
+      <div className="max-w-md mx-auto min-h-screen flex flex-col">
+        <Header isConnected={isConnected} walletAddress={walletAddress} onConnect={handleConnect} />
+
+        <main className="flex-1 p-4 space-y-6">
+          <AssetSelector selectedToken={selectedToken} onTokenSelect={handleTokenSelect} />
+          <ActionTabs onTransactionSuccess={handleTransactionSuccess} selectedToken={selectedToken} />
+          <Dashboard />
+          <SecurityDisclaimer />
+        </main>
+      </div>
+
+      {showSocialModal && socialModalData && (
+        <SocialModal
+          isOpen={showSocialModal}
+          onClose={() => setShowSocialModal(false)}
+          action={socialModalData.action}
+          amount={socialModalData.amount}
+          token={socialModalData.token}
+        />
+      )}
+    </div>
+  )
+}
+
+export default App
