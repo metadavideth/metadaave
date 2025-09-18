@@ -10,6 +10,17 @@ export const mockFarcasterUser = {
 export function isFarcasterEnvironment() {
   if (typeof window === "undefined") return false
   
+  console.log("Checking Farcaster environment...")
+  console.log("Environment details:", {
+    hostname: window.location.hostname,
+    isIframe: window.self !== window.top,
+    userAgent: navigator.userAgent,
+    referrer: document.referrer,
+    hasFarcasterSDK: !!(window as any).FarcasterMiniApp,
+    parentWindow: window.parent !== window,
+    searchParams: window.location.search
+  })
+  
   // Check for Farcaster SDK global
   if ((window as any).FarcasterMiniApp) {
     console.log("Farcaster SDK detected in global window")
@@ -39,15 +50,17 @@ export function isFarcasterEnvironment() {
     return true
   }
   
-  // For production, be more conservative - only try if we have clear indicators
+  // If we're in an iframe or have any Farcaster indicators, assume we're in Farcaster
+  if (window.self !== window.top || 
+      window.location.search.includes("farcaster") ||
+      window.location.search.includes("preview") ||
+      document.referrer.includes("farcaster") ||
+      document.referrer.includes("warpcast")) {
+    console.log("Farcaster environment detected - will attempt SDK usage")
+    return true
+  }
+  
   console.log("Not in Farcaster environment - SDK may not be available")
-  console.log("Environment details:", {
-    hostname: window.location.hostname,
-    isIframe: window.self !== window.top,
-    userAgent: navigator.userAgent,
-    referrer: document.referrer,
-    hasFarcasterSDK: !!(window as any).FarcasterMiniApp
-  })
   return false
 }
 
@@ -102,12 +115,30 @@ export async function waitForFarcasterSDK(timeout = 10000): Promise<any> {
         return
       }
       
+      // Try to manually load the SDK if it's not available
+      if (attempts === 5 && !(window as any).FarcasterMiniApp) {
+        console.log("Attempting to manually load Farcaster SDK...")
+        const script = document.createElement('script')
+        script.src = 'https://unpkg.com/@farcaster/miniapp-sdk@latest/dist/index.js'
+        script.onload = () => {
+          console.log("Manual SDK load completed")
+          setTimeout(checkSDK, 100)
+        }
+        script.onerror = () => {
+          console.error("Manual SDK load failed")
+          setTimeout(checkSDK, 100)
+        }
+        document.head.appendChild(script)
+        return
+      }
+      
       if (Date.now() - startTime > timeout) {
         console.warn("Farcaster SDK timeout - not loaded within", timeout, "ms after", attempts, "attempts")
         console.log("Final window state:", {
           hasFarcasterMiniApp: !!(window as any).FarcasterMiniApp,
           windowKeys: Object.keys(window).slice(0, 10),
-          allWindowKeys: Object.keys(window).length
+          allWindowKeys: Object.keys(window).length,
+          scripts: Array.from(document.scripts).map(s => s.src)
         })
         reject(new Error("Farcaster SDK not available"))
         return
