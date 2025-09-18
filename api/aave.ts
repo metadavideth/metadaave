@@ -78,9 +78,21 @@ const MOCK_RESERVE_DATA: ReserveData[] = [
 async function fetchAaveReserveData(): Promise<ReserveData[]> {
   try {
     console.log('Fetching Aave V3 data using Aave SDK...')
+    console.log('RPC URL:', BASE_RPC_URL)
+    console.log('Chain ID:', BASE_CHAIN_ID)
+    console.log('UI Pool Data Provider:', UI_POOL_DATA_PROVIDER_ADDRESS)
     
-    // Create provider for Base network
-    const provider = new ethers.providers.JsonRpcProvider(BASE_RPC_URL)
+    // Create provider for Base network with timeout
+    const provider = new ethers.providers.JsonRpcProvider(BASE_RPC_URL, {
+      name: 'base',
+      chainId: BASE_CHAIN_ID,
+    })
+    
+    console.log('Provider created, testing connection...')
+    
+    // Test the connection first
+    const blockNumber = await provider.getBlockNumber()
+    console.log('Connected to Base network, block number:', blockNumber)
     
     // Initialize UiPoolDataProvider
     const poolDataProviderContract = new UiPoolDataProvider({
@@ -89,10 +101,17 @@ async function fetchAaveReserveData(): Promise<ReserveData[]> {
       chainId: BASE_CHAIN_ID,
     })
 
-    // Get reserves data
-    const reservesData = await poolDataProviderContract.getReservesHumanized({
-      lendingPoolAddressProvider: '0xe20fCBdBfFC4Dd138cE8b2E6FBb6CB49777ad64D', // Pool Address Provider
-    })
+    console.log('UiPoolDataProvider initialized, calling getReservesHumanized...')
+
+    // Get reserves data with timeout
+    const reservesData = await Promise.race([
+      poolDataProviderContract.getReservesHumanized({
+        lendingPoolAddressProvider: '0xe20fCBdBfFC4Dd138cE8b2E6FBb6CB49777ad64D', // Pool Address Provider
+      }),
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Request timeout')), 20000)
+      )
+    ]) as any
 
     console.log(`Successfully fetched ${reservesData.reservesData.length} reserves using Aave SDK`)
 
@@ -115,9 +134,14 @@ async function fetchAaveReserveData(): Promise<ReserveData[]> {
       isUsingFallbackData: false
     }))
 
+    console.log('Converted reserves data, returning real data')
     return reserves
   } catch (error) {
     console.error('Error fetching from Aave SDK:', error)
+    console.error('Error details:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined
+    })
     console.log('Falling back to mock data')
     return MOCK_RESERVE_DATA
   }
