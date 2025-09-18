@@ -37,13 +37,44 @@ export function getFarcasterSDK() {
   
   try {
     if ((window as any).FarcasterMiniApp) {
+      console.log("Farcaster SDK found in window object")
       return (window as any).FarcasterMiniApp
+    } else {
+      console.log("Farcaster SDK not found in window object")
+      console.log("Available window properties:", Object.keys(window).filter(key => key.toLowerCase().includes('farcaster')))
     }
   } catch (error) {
     console.warn("Failed to get Farcaster SDK:", error)
   }
   
   return null
+}
+
+// Wait for Farcaster SDK to be available
+export async function waitForFarcasterSDK(timeout = 5000): Promise<any> {
+  return new Promise((resolve, reject) => {
+    const startTime = Date.now()
+    
+    const checkSDK = () => {
+      const sdk = getFarcasterSDK()
+      if (sdk) {
+        console.log("Farcaster SDK loaded successfully")
+        resolve(sdk)
+        return
+      }
+      
+      if (Date.now() - startTime > timeout) {
+        console.warn("Farcaster SDK timeout - not loaded within", timeout, "ms")
+        reject(new Error("Farcaster SDK not available"))
+        return
+      }
+      
+      // Check again in 100ms
+      setTimeout(checkSDK, 100)
+    }
+    
+    checkSDK()
+  })
 }
 
 // Get user data from Farcaster SDK or return mock data

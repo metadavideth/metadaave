@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { getFarcasterSDK, isFarcasterEnvironment, mockFarcasterUser } from "../utils/farcaster"
+import { getFarcasterSDK, waitForFarcasterSDK, isFarcasterEnvironment, mockFarcasterUser } from "../utils/farcaster"
 
 function shortenAddress(address?: string) {
   if (!address) return ""
@@ -22,43 +22,61 @@ export function Header() {
       try {
         setIsLoading(true)
         
-        // Get Farcaster SDK
-        const sdk = getFarcasterSDK()
+        // Check if we should try Farcaster environment
         const isFarcasterEnv = isFarcasterEnvironment()
         
         console.log("Farcaster environment check:", {
-          sdk: !!sdk,
           isFarcasterEnv,
           hostname: window.location.hostname,
           hasFarcasterSDK: !!(window as any).FarcasterMiniApp
         })
         
-        if (sdk && isFarcasterEnv) {
-          // We're in a Farcaster environment with SDK
+        if (isFarcasterEnv) {
+          // Try to get Farcaster SDK, waiting for it to load if needed
+          let sdk
           try {
-            console.log("Attempting Farcaster authentication...")
-            // Check if user is already authenticated
-            const isAuthenticated = await sdk.actions.isAuthenticated()
-            console.log("Farcaster authentication status:", isAuthenticated)
-            
-            if (isAuthenticated) {
-              // Get user data
-              const userData = await sdk.actions.getUserData()
-              console.log("Farcaster user data:", userData)
+            sdk = await waitForFarcasterSDK(3000) // Wait up to 3 seconds
+            console.log("Farcaster SDK loaded:", !!sdk)
+          } catch (error) {
+            console.warn("Failed to load Farcaster SDK:", error)
+            sdk = null
+          }
+          
+          if (sdk) {
+            // We're in a Farcaster environment with SDK
+            try {
+              console.log("Attempting Farcaster authentication...")
+              // Check if user is already authenticated
+              const isAuthenticated = await sdk.actions.isAuthenticated()
+              console.log("Farcaster authentication status:", isAuthenticated)
               
-              if (mounted && userData) {
-                setUsername(userData.username || "")
-                setAddress(userData.address || userData.verifiedAddresses?.[0] || "")
+              if (isAuthenticated) {
+                // Get user data
+                const userData = await sdk.actions.getUserData()
+                console.log("Farcaster user data:", userData)
+                
+                if (mounted && userData) {
+                  setUsername(userData.username || "")
+                  setAddress(userData.address || userData.verifiedAddresses?.[0] || "")
+                  setIsConnected(true)
+                }
+              } else {
+                console.log("User not authenticated, will need to connect")
+              }
+            } catch (sdkError) {
+              console.warn("SDK authentication check error:", sdkError)
+              // Fallback to mock data if SDK fails
+              if (mounted) {
+                console.log("Falling back to mock data due to SDK error")
+                setUsername(mockFarcasterUser.username)
+                setAddress(mockFarcasterUser.address)
                 setIsConnected(true)
               }
-            } else {
-              console.log("User not authenticated, will need to connect")
             }
-          } catch (sdkError) {
-            console.warn("SDK authentication check error:", sdkError)
-            // Fallback to mock data if SDK fails
+          } else {
+            // SDK not available, use mock data
+            console.log("Farcaster SDK not available, using mock data")
             if (mounted) {
-              console.log("Falling back to mock data due to SDK error")
               setUsername(mockFarcasterUser.username)
               setAddress(mockFarcasterUser.address)
               setIsConnected(true)
@@ -91,41 +109,57 @@ export function Header() {
       setIsLoading(true)
       setError(null)
       
-      // Get Farcaster SDK
-      const sdk = getFarcasterSDK()
+      // Check Farcaster environment
       const isFarcasterEnv = isFarcasterEnvironment()
       
       console.log("Connect attempt - Farcaster environment check:", {
-        sdk: !!sdk,
         isFarcasterEnv,
         hostname: window.location.hostname
       })
       
-      if (sdk && isFarcasterEnv) {
-        // We're in a Farcaster environment with SDK
+      if (isFarcasterEnv) {
+        // Try to get Farcaster SDK, waiting for it to load if needed
+        let sdk
         try {
-          console.log("Attempting Farcaster authentication...")
-          // Use authenticate method for sign-in
-          const authResult = await sdk.actions.authenticate()
-          console.log("Farcaster authentication result:", authResult)
-          
-          if (authResult && authResult.success) {
-            // Get user data after successful authentication
-            const userData = await sdk.actions.getUserData()
-            console.log("Farcaster user data after auth:", userData)
+          sdk = await waitForFarcasterSDK(3000) // Wait up to 3 seconds
+          console.log("Farcaster SDK loaded for connect:", !!sdk)
+        } catch (error) {
+          console.warn("Failed to load Farcaster SDK for connect:", error)
+          sdk = null
+        }
+        
+        if (sdk) {
+          // We're in a Farcaster environment with SDK
+          try {
+            console.log("Attempting Farcaster authentication...")
+            // Use authenticate method for sign-in
+            const authResult = await sdk.actions.authenticate()
+            console.log("Farcaster authentication result:", authResult)
             
-            if (userData) {
-              setUsername(userData.username || "")
-              setAddress(userData.address || userData.verifiedAddresses?.[0] || "")
-              setIsConnected(true)
+            if (authResult && authResult.success) {
+              // Get user data after successful authentication
+              const userData = await sdk.actions.getUserData()
+              console.log("Farcaster user data after auth:", userData)
+              
+              if (userData) {
+                setUsername(userData.username || "")
+                setAddress(userData.address || userData.verifiedAddresses?.[0] || "")
+                setIsConnected(true)
+              }
+            } else {
+              throw new Error("Authentication failed - no success response")
             }
-          } else {
-            throw new Error("Authentication failed - no success response")
+          } catch (sdkError) {
+            console.warn("SDK auth error:", sdkError)
+            setError(`Farcaster authentication failed: ${sdkError instanceof Error ? sdkError.message : 'Unknown error'}`)
+            // Fallback to mock data if SDK fails (for previewer)
+            setUsername(mockFarcasterUser.username)
+            setAddress(mockFarcasterUser.address)
+            setIsConnected(true)
           }
-        } catch (sdkError) {
-          console.warn("SDK auth error:", sdkError)
-          setError(`Farcaster authentication failed: ${sdkError instanceof Error ? sdkError.message : 'Unknown error'}`)
-          // Fallback to mock data if SDK fails (for previewer)
+        } else {
+          // SDK not available, use mock data
+          console.log("Farcaster SDK not available for connection, using mock data")
           setUsername(mockFarcasterUser.username)
           setAddress(mockFarcasterUser.address)
           setIsConnected(true)
