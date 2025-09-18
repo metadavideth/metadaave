@@ -3,6 +3,7 @@ import { useAccount } from 'wagmi'
 import { parseUnits, formatUnits } from 'viem'
 import { createWalletClient, createPublicClient, http, getContract } from 'viem'
 import { base } from 'viem/chains'
+import { getAuthenticatedAddress, getFarcasterSDK, isFarcasterEnvironment } from '../utils/farcaster'
 import type { Token } from '../types'
 
 // Aave V3 Pool ABI - minimal for core functions
@@ -107,24 +108,26 @@ export function calculateTransactionFee(amount: string): string {
   return (numAmount * TRANSACTION_FEE_RATE).toFixed(6)
 }
 
-// Get Farcaster wallet client
-function getFarcasterWalletClient() {
-  if (typeof window === 'undefined' || !(window as any).FarcasterMiniApp) {
-    throw new Error('Farcaster SDK not available')
-  }
+// Get Farcaster wallet client with proper error handling
+async function getFarcasterWalletClient() {
+  try {
+    // Get the authenticated address
+    const address = await getAuthenticatedAddress()
+    
+    if (!address) {
+      throw new Error('No authenticated address found')
+    }
 
-  const sdk = (window as any).FarcasterMiniApp
-  if (!sdk.actions?.getUserData) {
-    throw new Error('Farcaster SDK not properly initialized')
+    // Create wallet client with the authenticated address
+    return createWalletClient({
+      chain: base,
+      transport: http(),
+      account: address as `0x${string}`,
+    })
+  } catch (error) {
+    console.error('Failed to create Farcaster wallet client:', error)
+    throw new Error(`Failed to initialize wallet: ${error instanceof Error ? error.message : 'Unknown error'}`)
   }
-
-  // For now, we'll use a mock wallet client
-  // In a real implementation, you'd integrate with the Farcaster wallet
-  return createWalletClient({
-    chain: base,
-    transport: http(),
-    account: '0x0000000000000000000000000000000000000000' as `0x${string}`, // Mock address
-  })
 }
 
 // Create public client for reading
@@ -138,15 +141,14 @@ async function executeAaveTransaction(params: TransactionParams): Promise<Transa
   const { token, amount, action } = params
   
   try {
-    // Get Farcaster wallet
-    const walletClient = getFarcasterWalletClient()
-    const userData = await (window as any).FarcasterMiniApp.actions.getUserData()
+    // Get Farcaster wallet client
+    const walletClient = await getFarcasterWalletClient()
+    const userAddress = await getAuthenticatedAddress()
     
-    if (!userData?.verifiedAddresses?.[0]) {
-      throw new Error('No verified address found in Farcaster wallet')
+    if (!userAddress) {
+      throw new Error('No authenticated address found')
     }
 
-    const userAddress = userData.verifiedAddresses[0] as `0x${string}`
     const tokenAddress = token.address as `0x${string}`
     const amountWei = parseUnits(amount, token.decimals || 18)
     const fee = calculateTransactionFee(amount)
@@ -242,7 +244,7 @@ async function ensureTokenApproval(
   
   if (currentAllowance < amount) {
     // Need to approve
-    const walletClient = getFarcasterWalletClient()
+    const walletClient = await getFarcasterWalletClient()
     const tokenContractWrite = getContract({
       address: tokenAddress,
       abi: ERC20_ABI,

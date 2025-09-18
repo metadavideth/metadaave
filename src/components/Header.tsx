@@ -1,49 +1,11 @@
 "use client"
 
 import { useEffect, useState } from "react"
-
-// Mock Farcaster data for development/previewer
-const mockFarcasterUser = {
-  fid: 123,
-  username: "farcaster_user",
-  displayName: "Farcaster User",
-  address: "0x1234567890abcdef1234567890abcdef12345678"
-}
+import { getFarcasterSDK, isFarcasterEnvironment, mockFarcasterUser } from "../utils/farcaster"
 
 function shortenAddress(address?: string) {
   if (!address) return ""
   return `${address.slice(0, 6)}...${address.slice(-4)}`
-}
-
-// Check if we're in a Farcaster Mini App environment
-function isFarcasterEnvironment() {
-  if (typeof window === "undefined") return false
-  
-  // Check for Farcaster SDK global
-  if ((window as any).FarcasterMiniApp) return true
-  
-  // Check for Farcaster previewer or iframe context
-  if (window.location.hostname.includes("farcaster") || 
-      window.location.search.includes("farcaster") ||
-      window.location.search.includes("preview") ||
-      window.parent !== window) return true
-  
-  return false
-}
-
-// Get Farcaster SDK instance from global window object
-function getFarcasterSDK() {
-  if (typeof window === "undefined") return null
-  
-  try {
-    if ((window as any).FarcasterMiniApp) {
-      return (window as any).FarcasterMiniApp
-    }
-  } catch (error) {
-    console.warn("Failed to get Farcaster SDK:", error)
-  }
-  
-  return null
 }
 
 export function Header() {
