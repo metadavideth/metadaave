@@ -6,8 +6,8 @@ export const mockFarcasterUser = {
   address: "0x1234567890abcdef1234567890abcdef12345678"
 }
 
-// Farcaster SDK should be automatically injected by Farcaster
-// We access it from the global window object
+// Import Farcaster SDK as per official documentation
+import { sdk } from "@farcaster/miniapp-sdk"
 
 // Check if we're in a Farcaster Mini App environment
 export function isFarcasterEnvironment() {
@@ -67,19 +67,17 @@ export function isFarcasterEnvironment() {
   return false
 }
 
-// Get Farcaster SDK instance from global window object
+// Get Farcaster SDK instance - now imported as module
 export function getFarcasterSDK() {
   if (typeof window === "undefined") return null
   
-  // According to Farcaster docs, the SDK should be at window.FarcasterMiniApp
-  const sdk = (window as any).FarcasterMiniApp
-  
+  // SDK is now imported as a module, so we can return it directly
   if (sdk && sdk.actions) {
-    console.log("✅ Farcaster SDK found at window.FarcasterMiniApp")
+    console.log("✅ Farcaster SDK available via import")
     return sdk
   }
   
-  console.log("❌ Farcaster SDK not found at window.FarcasterMiniApp")
+  console.log("❌ Farcaster SDK not available via import")
   return null
 }
 

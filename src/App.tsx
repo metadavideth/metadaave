@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { sdk } from "@farcaster/miniapp-sdk"
 import { Header } from "./components/Header"
 import { AssetSelector } from "./components/AssetSelector"
 import { ActionTabs } from "./components/ActionTabs"
@@ -20,23 +21,16 @@ function App() {
   const [selectedToken, setSelectedToken] = useState<Token>(AAVE_V3_BASE_TOKENS[0])
 
   // Call ready() when the interface is ready to be displayed
-  // This is the correct place according to Farcaster docs
+  // This follows the official Farcaster getting started guide
   useEffect(() => {
     const callReady = async () => {
-      if (typeof window !== 'undefined' && (window as any).FarcasterMiniApp) {
-        const sdk = (window as any).FarcasterMiniApp
-        console.log("✅ App: Farcaster SDK detected")
-        
-        if (sdk.actions && sdk.actions.ready) {
-          try {
-            await sdk.actions.ready()
-            console.log("✅ App: Farcaster SDK ready() called successfully - splash screen should hide")
-          } catch (error) {
-            console.warn("❌ App: Farcaster SDK ready() failed:", error)
-          }
-        }
-      } else {
-        console.log("⚠️ App: Farcaster SDK not available - splash screen will persist")
+      try {
+        console.log("✅ App: Calling sdk.actions.ready() as per Farcaster docs")
+        await sdk.actions.ready()
+        console.log("✅ App: Farcaster SDK ready() called successfully - splash screen should hide")
+      } catch (error) {
+        console.warn("❌ App: Farcaster SDK ready() failed:", error)
+        console.log("This might be expected in preview mode or if SDK is not available")
       }
     }
 
