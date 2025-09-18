@@ -4,17 +4,13 @@ import { formatUnits } from 'viem'
 import { AAVE_V3_BASE_TOKENS } from '../data/tokens'
 import type { Token } from '../types'
 
-// Aave V3 Base subgraph endpoint - try multiple endpoints
-const AAVE_V3_SUBGRAPH_URLS = [
-  'https://api.thegraph.com/subgraphs/name/aave/protocol-v3-base',
-  'https://api.thegraph.com/subgraphs/name/aave/protocol-v3',
-  'https://api.thegraph.com/subgraphs/name/aave/aave-v3-base'
-]
+// Aave V3 official API endpoint
+const AAVE_V3_API_URL = 'https://api.v3.aave.com/graphql'
 
-// GraphQL query to get reserve data for Base
+// GraphQL query to get reserve data for Base from Aave V3 API
 const GET_RESERVE_DATA = `
-  query GetReserveData($reserveAddresses: [String!]!) {
-    reserves(where: { underlyingAsset_in: $reserveAddresses, isActive: true }) {
+  query GetReserveData($chainId: Int!) {
+    reserves(chainId: $chainId) {
       id
       underlyingAsset
       symbol
@@ -26,6 +22,7 @@ const GET_RESERVE_DATA = `
       totalCurrentVariableDebt
       priceInEth
       priceInUsd
+      isActive
     }
   }
 `
@@ -65,39 +62,37 @@ const MOCK_RESERVE_DATA: ReserveData[] = AAVE_V3_BASE_TOKENS.map(token => ({
 
 // Fetch Aave V3 reserve data with fallback
 async function fetchAaveReserveData(): Promise<ReserveData[]> {
-  const reserveAddresses = AAVE_V3_BASE_TOKENS.map(token => token.address.toLowerCase())
-  
-  // Try each subgraph endpoint
-  for (const url of AAVE_V3_SUBGRAPH_URLS) {
-    try {
-      console.log(`Trying Aave subgraph: ${url}`)
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          query: GET_RESERVE_DATA,
-          variables: { reserveAddresses }
-        })
+  try {
+    console.log('Fetching Aave V3 data from official API...')
+    const response = await fetch(AAVE_V3_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        query: GET_RESERVE_DATA,
+        variables: { chainId: 8453 } // Base chain ID
       })
+    })
 
-      if (response.ok) {
-        const data: { data: AaveReserveData } = await response.json()
-        if (data.data?.reserves?.length > 0) {
-          console.log(`Successfully fetched data from: ${url}`)
-          return data.data.reserves
-        }
+    if (response.ok) {
+      const data: { data: AaveReserveData } = await response.json()
+      if (data.data?.reserves?.length > 0) {
+        console.log('Successfully fetched data from Aave V3 API')
+        // Filter to only include our tokens
+        const ourTokenAddresses = AAVE_V3_BASE_TOKENS.map(token => token.address.toLowerCase())
+        const filteredReserves = data.data.reserves.filter(reserve => 
+          ourTokenAddresses.includes(reserve.underlyingAsset.toLowerCase())
+        )
+        return filteredReserves
       }
-    } catch (error) {
-      console.warn(`Failed to fetch from ${url}:`, error)
-      continue
     }
+    
+    throw new Error(`API response not ok: ${response.status}`)
+  } catch (error) {
+    console.warn('Failed to fetch from Aave V3 API:', error)
+    throw new Error('Aave V3 API unavailable - using demo data')
   }
-  
-  // If all subgraph endpoints fail, throw an error to trigger error state
-  console.warn('All Aave subgraph endpoints failed')
-  throw new Error('Aave subgraph unavailable - using demo data')
 }
 
 // Hook to get Aave V3 data

@@ -125,7 +125,7 @@ export function AssetSelector({ selectedToken, onTokenSelect }: AssetSelectorPro
       {isUsingFallbackData && (
         <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-950 rounded-lg border border-yellow-200 dark:border-yellow-800">
           <div className="text-sm text-yellow-800 dark:text-yellow-200">
-            ⚠️ Using demo data - Aave subgraph unavailable
+            ⚠️ Using demo data - Aave V3 API unavailable
           </div>
         </div>
       )}
