@@ -79,10 +79,13 @@ export function useEnrichedTokens() {
     return token
   })
 
+  // Check if we're using fallback data by looking at any reserve data
+  const isUsingFallbackData = aaveData?.some(reserve => reserve.isUsingFallbackData) || false
+
   return {
     tokens: enrichedTokens,
     isLoading,
     error,
-    isUsingFallbackData: aaveData?.[0]?.isUsingFallbackData || false
+    isUsingFallbackData
   }
 }

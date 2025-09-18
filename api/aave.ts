@@ -1,10 +1,15 @@
 import { VercelRequest, VercelResponse } from '@vercel/node'
-
-// Aave V3 Base subgraph endpoint
-const AAVE_V3_BASE_SUBGRAPH_URL = 'https://api.thegraph.com/subgraphs/id/D7mapexM5ZsQckLJai2FawTKXJ7CqYGKM8PErnS3cJi9'
+import { UiPoolDataProvider } from '@aave/contract-helpers'
+import { formatReserves } from '@aave/math-utils'
+import { ethers } from 'ethers'
 
 // Base network configuration
 const BASE_CHAIN_ID = 8453
+const BASE_RPC_URL = 'https://mainnet.base.org'
+
+// Aave V3 Pool addresses on Base (from Aave Address Book)
+const AAVE_V3_POOL_ADDRESS = '0x6Ae43d3271ff6888e7Fc43Fd7321a503ff738951'
+const UI_POOL_DATA_PROVIDER_ADDRESS = '0x174446A67401D7d7Dd94A6BA2C8b56d0e4b2a1e5'
 
 // Token addresses on Base (from Aave Address Book)
 const BASE_TOKEN_ADDRESSES = {
@@ -34,26 +39,6 @@ interface AaveReserveData {
   reserves: ReserveData[]
 }
 
-// GraphQL query for Aave V3 Base reserves
-const GET_RESERVE_DATA = `
-  query GetReserveData($reserveAddresses: [String!]!) {
-    reserves(where: { underlyingAsset_in: $reserveAddresses, isActive: true }) {
-      id
-      underlyingAsset
-      symbol
-      name
-      decimals
-      liquidityRate
-      variableBorrowRate
-      totalLiquidity
-      totalCurrentVariableDebt
-      priceInEth
-      priceInUsd
-      isActive
-    }
-  }
-`
-
 // Fallback mock data
 const MOCK_RESERVE_DATA: ReserveData[] = [
   {
@@ -68,7 +53,10 @@ const MOCK_RESERVE_DATA: ReserveData[] = [
     totalCurrentVariableDebt: '500000000000', // 500K USDC
     priceInEth: '0.0005',
     priceInUsd: '1.00',
-    isActive: true
+    isActive: true,
+    supplyAPY: 4.0,
+    borrowAPY: 6.0,
+    isUsingFallbackData: true
   },
   {
     id: BASE_TOKEN_ADDRESSES.ETH,
@@ -82,45 +70,56 @@ const MOCK_RESERVE_DATA: ReserveData[] = [
     totalCurrentVariableDebt: '500000000000000000000', // 500 ETH
     priceInEth: '1.0',
     priceInUsd: '2000.00',
-    isActive: true
+    isActive: true,
+    supplyAPY: 3.0,
+    borrowAPY: 5.0,
+    isUsingFallbackData: true
   }
 ]
 
 async function fetchAaveReserveData(): Promise<ReserveData[]> {
   try {
-    console.log('Fetching Aave V3 data from Base subgraph...')
+    console.log('Fetching Aave V3 data using Aave SDK...')
     
-    const reserveAddresses = Object.values(BASE_TOKEN_ADDRESSES)
+    // Create provider for Base network
+    const provider = new ethers.JsonRpcProvider(BASE_RPC_URL)
     
-    const response = await fetch(AAVE_V3_BASE_SUBGRAPH_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        query: GET_RESERVE_DATA,
-        variables: { reserveAddresses }
-      }),
+    // Initialize UiPoolDataProvider
+    const poolDataProviderContract = new UiPoolDataProvider({
+      uiPoolDataProviderAddress: UI_POOL_DATA_PROVIDER_ADDRESS,
+      provider,
+      chainId: BASE_CHAIN_ID,
     })
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
-    }
+    // Get reserves data
+    const reservesData = await poolDataProviderContract.getReservesHumanized({
+      lendingPoolAddressProvider: AAVE_V3_POOL_ADDRESS,
+    })
 
-    const data: { data: AaveReserveData; errors?: any[] } = await response.json()
+    console.log(`Successfully fetched ${reservesData.reservesData.length} reserves using Aave SDK`)
 
-    if (data.errors && data.errors.length > 0) {
-      throw new Error(`GraphQL errors: ${data.errors.map(e => e.message).join(', ')}`)
-    }
+    // Convert to our format
+    const reserves: ReserveData[] = reservesData.reservesData.map((reserve: any) => ({
+      id: reserve.underlyingAsset,
+      underlyingAsset: reserve.underlyingAsset,
+      symbol: reserve.symbol,
+      name: reserve.name,
+      decimals: reserve.decimals,
+      liquidityRate: reserve.liquidityRate,
+      variableBorrowRate: reserve.variableBorrowRate,
+      totalLiquidity: reserve.totalLiquidity,
+      totalCurrentVariableDebt: reserve.totalCurrentVariableDebt,
+      priceInEth: reserve.priceInEth,
+      priceInUsd: reserve.priceInUsd,
+      isActive: reserve.isActive,
+      supplyAPY: parseFloat(reserve.liquidityRate) * 100,
+      borrowAPY: parseFloat(reserve.variableBorrowRate) * 100,
+      isUsingFallbackData: false
+    }))
 
-    if (data.data?.reserves?.length > 0) {
-      console.log(`Successfully fetched ${data.data.reserves.length} reserves from Base subgraph`)
-      return data.data.reserves
-    } else {
-      throw new Error('No reserves data found in subgraph response')
-    }
+    return reserves
   } catch (error) {
-    console.error('Error fetching from Base subgraph:', error)
+    console.error('Error fetching from Aave SDK:', error)
     console.log('Falling back to mock data')
     return MOCK_RESERVE_DATA
   }
@@ -143,23 +142,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const reserves = await fetchAaveReserveData()
     
-    // Convert rates from ray (27 decimals) to APY percentages
-    const enrichedReserves = reserves.map(reserve => {
-      const supplyAPY = (Number(reserve.liquidityRate) / 1e25) * 100
-      const borrowAPY = (Number(reserve.variableBorrowRate) / 1e25) * 100
-      
-      return {
-        ...reserve,
-        supplyAPY: Number(supplyAPY.toFixed(4)),
-        borrowAPY: Number(borrowAPY.toFixed(4)),
-        isUsingFallbackData: reserves === MOCK_RESERVE_DATA
-      }
-    })
-
     res.status(200).json({
       success: true,
-      data: enrichedReserves,
-      isUsingFallbackData: reserves === MOCK_RESERVE_DATA,
+      data: reserves,
+      isUsingFallbackData: reserves[0]?.isUsingFallbackData || false,
       timestamp: new Date().toISOString()
     })
   } catch (error) {
