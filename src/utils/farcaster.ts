@@ -7,7 +7,7 @@ export const mockFarcasterUser = {
 }
 
 // Import Farcaster SDK as per official documentation
-import { sdk } from "@farcaster/miniapp-sdk"
+import { sdk as farcasterSDK } from "@farcaster/miniapp-sdk"
 
 // Check if we're in a Farcaster Mini App environment
 export function isFarcasterEnvironment() {
@@ -72,9 +72,9 @@ export function getFarcasterSDK() {
   if (typeof window === "undefined") return null
   
   // SDK is now imported as a module, so we can return it directly
-  if (sdk && sdk.actions) {
+  if (farcasterSDK && farcasterSDK.actions) {
     console.log("✅ Farcaster SDK available via import")
-    return sdk
+    return farcasterSDK
   }
   
   console.log("❌ Farcaster SDK not available via import")
@@ -180,16 +180,17 @@ export async function getFarcasterUserData() {
       
       try {
         // Check if SDK is available
-        if (!sdk) {
+        let currentSDK = farcasterSDK
+        if (!currentSDK) {
           console.log("Farcaster SDK not available, trying to get it...")
-          sdk = getFarcasterSDK()
+          currentSDK = getFarcasterSDK()
         }
         
-        if (sdk && sdk.quickAuth) {
+        if (currentSDK && currentSDK.quickAuth) {
           console.log("Using Farcaster Quick Auth...")
           
           // Try to get a Quick Auth token
-          const { token } = await sdk.quickAuth.getToken()
+          const { token } = await currentSDK.quickAuth.getToken()
           console.log("Quick Auth token received:", !!token)
           
           if (token) {
@@ -204,20 +205,20 @@ export async function getFarcasterUserData() {
         }
         
         // Fallback to traditional authentication if Quick Auth fails
-        if (sdk && sdk.actions) {
+        if (currentSDK && currentSDK.actions) {
           console.log("Falling back to traditional authentication...")
           
-          if (sdk.actions.ready) {
-            await sdk.actions.ready()
+          if (currentSDK.actions.ready) {
+            await currentSDK.actions.ready()
             console.log("Farcaster SDK ready")
           }
           
-          if (sdk.actions.isAuthenticated) {
-            const isAuthenticated = await sdk.actions.isAuthenticated()
+          if (currentSDK.actions.isAuthenticated) {
+            const isAuthenticated = await currentSDK.actions.isAuthenticated()
             console.log("User authenticated:", isAuthenticated)
             
-            if (isAuthenticated && sdk.actions.getUserData) {
-              const userData = await sdk.actions.getUserData()
+            if (isAuthenticated && currentSDK.actions.getUserData) {
+              const userData = await currentSDK.actions.getUserData()
               console.log("User data received:", userData)
               
               if (userData) {
@@ -256,10 +257,10 @@ export async function getAuthenticatedAddress(): Promise<string> {
 
 // Make authenticated requests using Quick Auth
 export async function makeAuthenticatedRequest(url: string, options: RequestInit = {}) {
-  if (isFarcasterEnvironment() && sdk && sdk.quickAuth) {
+  if (isFarcasterEnvironment() && farcasterSDK && farcasterSDK.quickAuth) {
     try {
       console.log("Making authenticated request with Quick Auth...")
-      return await sdk.quickAuth.fetch(url, options)
+      return await farcasterSDK.quickAuth.fetch(url, options)
     } catch (error) {
       console.warn("Quick Auth fetch failed:", error)
       // Fallback to regular fetch
@@ -273,9 +274,9 @@ export async function makeAuthenticatedRequest(url: string, options: RequestInit
 
 // Get Quick Auth token
 export async function getQuickAuthToken() {
-  if (isFarcasterEnvironment() && sdk && sdk.quickAuth) {
+  if (isFarcasterEnvironment() && farcasterSDK && farcasterSDK.quickAuth) {
     try {
-      const { token } = await sdk.quickAuth.getToken()
+      const { token } = await farcasterSDK.quickAuth.getToken()
       return token
     } catch (error) {
       console.warn("Failed to get Quick Auth token:", error)

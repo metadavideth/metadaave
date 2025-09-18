@@ -5,11 +5,87 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="metadaave - DeFi lending on Base via Farcaster" />
-    <meta name="fc:miniapp" content='{"version":"1","imageUrl":"https://metadaave-2l149wuq0-davids-projects-8520d68f.vercel.app/placeholder-logo.png","button":{"title":"Open metadaave","action":{"type":"launch_frame","name":"metadaave","url":"https://metadaave-2l149wuq0-davids-projects-8520d68f.vercel.app","splashImageUrl":"https://metadaave-2l149wuq0-davids-projects-8520d68f.vercel.app/placeholder-logo.png","splashBackgroundColor":"#FFFFFF"}}}' />
+    <meta name="fc:miniapp" content='{"version":"1","imageUrl":"https://metadaave.vercel.app/placeholder-logo.png","button":{"title":"Open metadaave","action":{"type":"launch_frame","name":"metadaave","url":"https://metadaave.vercel.app","splashImageUrl":"https://metadaave.vercel.app/placeholder-logo.png","splashBackgroundColor":"#FFFFFF"}}}' />
     <title>metadaave</title>
-    <script src="https://unpkg.com/@farcaster/miniapp-sdk@latest/dist/index.js"></script>
-    <script type="module" crossorigin src="/assets/index-4xUsfInh.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-Ba_2YMkf.css">
+    <!-- Preconnect to Farcaster Auth Server for better performance -->
+    <link rel="preconnect" href="https://auth.farcaster.xyz" />
+    <script>
+      // Debug environment and SDK availability
+      (function() {
+        console.log('=== Farcaster Environment Debug ===');
+        console.log('URL:', window.location.href);
+        console.log('Referrer:', document.referrer);
+        console.log('User Agent:', navigator.userAgent);
+        console.log('Is iframe:', window.self !== window.top);
+        console.log('Parent window:', window.parent !== window);
+        console.log('All window keys:', Object.keys(window).slice(0, 20));
+        
+        // Check for Farcaster-specific indicators
+        const farcasterIndicators = {
+          hasFarcasterSDK: !!(window.FarcasterMiniApp),
+          hasFarcasterInURL: window.location.href.includes('farcaster'),
+          hasFarcasterInReferrer: document.referrer.includes('farcaster'),
+          hasWarpcastInReferrer: document.referrer.includes('warpcast'),
+          isIframe: window.self !== window.top,
+          hasFarcasterInUserAgent: navigator.userAgent.includes('farcaster')
+        };
+        
+        console.log('Farcaster indicators:', farcasterIndicators);
+        
+        // Check if we're actually in a Mini App environment
+        const isMiniAppEnvironment = farcasterIndicators.hasFarcasterInURL || 
+                                   farcasterIndicators.hasFarcasterInReferrer ||
+                                   farcasterIndicators.hasWarpcastInReferrer ||
+                                   farcasterIndicators.isIframe;
+        
+        console.log('Is Mini App environment:', isMiniAppEnvironment);
+        
+        if (!isMiniAppEnvironment) {
+          console.log('⚠️ This does not appear to be a Farcaster Mini App environment');
+          console.log('The SDK will not be injected unless running in Farcaster/Warpcast');
+          return;
+        }
+        
+        console.log('✅ Appears to be in Farcaster environment, waiting for SDK...');
+        
+        let attempts = 0;
+        const maxAttempts = 50; // 5 seconds
+        
+        function waitForSDK() {
+          attempts++;
+          console.log(`SDK check attempt ${attempts}/${maxAttempts}`);
+          
+          if (window.FarcasterMiniApp && window.FarcasterMiniApp.actions) {
+            console.log('✅ Farcaster SDK detected, calling ready()...');
+            window.FarcasterMiniApp.actions.ready()
+              .then(() => {
+                console.log('✅ Farcaster SDK ready() called successfully - splash screen should hide');
+              })
+              .catch((error) => {
+                console.warn('❌ Farcaster SDK ready() failed:', error);
+              });
+          } else if (attempts >= maxAttempts) {
+            console.log('❌ Farcaster SDK not found after', maxAttempts, 'attempts');
+            console.log('This is expected in the preview tool - it ignores the manifest');
+            console.log('The splash screen will persist because ready() was not called');
+            console.log('To test with full SDK:');
+            console.log('1. Use the Mini App Debug Tool (not preview tool)');
+            console.log('2. Test in real Farcaster/Warpcast client');
+            console.log('3. Share a link in Farcaster and click it');
+            
+            // In preview mode, we can't call ready() because SDK is not available
+            // The splash screen will remain visible - this is expected behavior
+            console.log('⚠️ Cannot call ready() in preview mode - splash screen will persist');
+          } else {
+            setTimeout(waitForSDK, 100);
+          }
+        }
+        
+        waitForSDK();
+      })();
+    </script>
+    <script type="module" crossorigin src="/assets/index-CRCNCFRG.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-BpI-vswP.css">
   </head>
   <body class="text-white">
     <div id="root"></div>
