@@ -122,8 +122,10 @@ export function ActionTabs({ onTransactionSuccess, selectedToken }: ActionTabsPr
   }
 
   const getMaxAmount = () => {
-    // Extract numeric value from balance string like "0.08 tBTC" -> "0.08"
-    const numericValue = currentToken.balance.split(" ")[0]
+    // Extract numeric value from balance string like "0.08 tBTC" -> "0.08" or "1,250.00 USDC" -> "1250.00"
+    const balancePart = currentToken.balance.split(" ")[0]
+    // Remove commas from the balance string (e.g., "1,250.00" -> "1250.00")
+    const numericValue = balancePart.replace(/,/g, '')
     return numericValue
   }
 
