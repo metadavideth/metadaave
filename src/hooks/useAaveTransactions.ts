@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAccount } from 'wagmi'
 import { parseUnits, formatUnits } from 'viem'
 import { createWalletClient, createPublicClient, http, getContract } from 'viem'
-import { base } from 'viem/chains'
+import { baseSepolia } from 'viem/chains'
 import { getAuthenticatedAddress, getFarcasterSDK, isFarcasterEnvironment, mockFarcasterUser } from '../utils/farcaster'
 import type { Token } from '../types'
 
@@ -82,8 +82,8 @@ const ERC20_ABI = [
   }
 ] as const
 
-// Aave V3 Pool address on Base
-const AAVE_V3_POOL_ADDRESS = '0xA238Dd80C259a72e81d7e4664a9801593F98d1c5'
+// Aave V3 Pool address on Base Sepolia
+const AAVE_V3_POOL_ADDRESS = '0x6Ae43d3271ff6888e7Fc43Fd7321a503ff738951'
 
 // Transaction fee (0.1%)
 const TRANSACTION_FEE_RATE = 0.001
@@ -147,7 +147,7 @@ async function getFarcasterWalletClient() {
 
     // In real Farcaster environment, create actual wallet client
     return createWalletClient({
-      chain: base,
+      chain: baseSepolia,
       transport: http(),
       account: address as `0x${string}`,
     })
@@ -160,7 +160,7 @@ async function getFarcasterWalletClient() {
 // Create a mock wallet client for development/previewer
 function createMockWalletClient(address: `0x${string}`) {
   return {
-    chain: base,
+    chain: baseSepolia,
     account: address,
     writeContract: async (params: any) => {
       // Simulate transaction delay
@@ -178,7 +178,7 @@ function createMockWalletClient(address: `0x${string}`) {
 
 // Create public client for reading
 const publicClient = createPublicClient({
-  chain: base,
+  chain: baseSepolia,
   transport: http(),
 })
 

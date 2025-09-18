@@ -3,13 +3,13 @@ import ReactDOM from "react-dom/client"
 import App from "./App.tsx"
 import "./index.css"
 import { WagmiProvider, createConfig, http } from "wagmi"
-import { base } from "wagmi/chains"
+import { baseSepolia } from "wagmi/chains"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 
 const config = createConfig({
-  chains: [base],
+  chains: [baseSepolia],
   transports: {
-    [base.id]: http(),
+    [baseSepolia.id]: http(),
   },
   ssr: false,
 })
