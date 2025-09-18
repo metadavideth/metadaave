@@ -10,133 +10,30 @@
     <!-- Preconnect to Farcaster Auth Server for better performance -->
     <link rel="preconnect" href="https://auth.farcaster.xyz" />
     <script>
-      // Call sdk.actions.ready() immediately when the page loads
-      // This prevents the splash screen from persisting
+      // According to Farcaster docs, the SDK should be automatically injected
+      // We just need to wait for it and call ready() when available
       (function() {
-        console.log('=== Farcaster SDK Detection Debug ===');
-        console.log('Window keys:', Object.keys(window).slice(0, 30));
-        console.log('Looking for Farcaster in window:', Object.keys(window).filter(k => k.toLowerCase().includes('farcaster')));
-        console.log('Looking for MiniApp in window:', Object.keys(window).filter(k => k.toLowerCase().includes('miniapp')));
-        console.log('Looking for SDK in window:', Object.keys(window).filter(k => k.toLowerCase().includes('sdk')));
+        console.log('=== Farcaster Mini App Initialization ===');
         
-        let attempts = 0;
-        const maxAttempts = 50; // Stop after 5 seconds (50 * 100ms)
-        
-        function tryReady() {
-          attempts++;
-          console.log(`Attempt ${attempts}/${maxAttempts}: Attempting to find Farcaster SDK...`);
-          
-          // Check all possible SDK locations
-          const possibleSDKs = [
-            { name: 'window.FarcasterMiniApp', sdk: window.FarcasterMiniApp },
-            { name: 'window.farcaster', sdk: window.farcaster },
-            { name: 'window.Farcaster', sdk: window.Farcaster },
-            { name: 'window.MiniApp', sdk: window.MiniApp },
-            { name: 'window.sdk', sdk: window.sdk },
-            { name: 'window.FarcasterMiniApp?.sdk', sdk: window.FarcasterMiniApp?.sdk },
-            { name: 'window.farcaster?.sdk', sdk: window.farcaster?.sdk },
-            { name: 'window.Farcaster?.sdk', sdk: window.Farcaster?.sdk }
-          ];
-          
-        // Log all possibilities
-        possibleSDKs.forEach(({ name, sdk }) => {
-          console.log(`${name}:`, !!sdk);
-          if (sdk) {
-            console.log(`  Structure:`, Object.keys(sdk));
-            if (sdk.actions) console.log(`  Actions:`, Object.keys(sdk.actions));
-            if (sdk.quickAuth) console.log(`  QuickAuth:`, Object.keys(sdk.quickAuth));
-          }
-        });
-        
-        // Also check for any objects that might contain Farcaster SDK
-        console.log('🔍 Checking for any Farcaster-related objects in window...');
-        const allWindowKeys = Object.keys(window);
-        const farcasterRelatedKeys = allWindowKeys.filter(key => 
-          key.toLowerCase().includes('farcaster') || 
-          key.toLowerCase().includes('miniapp') ||
-          key.toLowerCase().includes('sdk')
-        );
-        console.log('Farcaster-related keys found:', farcasterRelatedKeys);
-        
-        // Check each farcaster-related key
-        farcasterRelatedKeys.forEach(key => {
-          const obj = (window as any)[key];
-          console.log(`🔍 ${key}:`, typeof obj, obj);
-          if (obj && typeof obj === 'object') {
-            console.log(`  Keys:`, Object.keys(obj));
-            if (obj.actions) console.log(`  Actions:`, Object.keys(obj.actions));
-            if (obj.quickAuth) console.log(`  QuickAuth:`, Object.keys(obj.quickAuth));
-          }
-        });
-        
-        // Check CoinbaseWalletSDK specifically (we saw this in the console)
-        if ((window as any).CoinbaseWalletSDK) {
-          console.log('🔍 CoinbaseWalletSDK found:', (window as any).CoinbaseWalletSDK);
-          const cbSDK = (window as any).CoinbaseWalletSDK;
-          if (cbSDK && typeof cbSDK === 'object') {
-            console.log('  CoinbaseWalletSDK Keys:', Object.keys(cbSDK));
-            // Check if it has Farcaster-related methods
-            if (cbSDK.actions) console.log('  CoinbaseWalletSDK Actions:', Object.keys(cbSDK.actions));
-            if (cbSDK.quickAuth) console.log('  CoinbaseWalletSDK QuickAuth:', Object.keys(cbSDK.quickAuth));
-          }
-        }
-        
-        // Check for any global variables that might be set by Farcaster
-        console.log('🔍 Checking for global Farcaster variables...');
-        const globalVars = ['farcaster', 'Farcaster', 'miniapp', 'MiniApp', 'sdk', 'SDK'];
-        globalVars.forEach(varName => {
-          if ((window as any)[varName]) {
-            console.log(`🔍 Global ${varName}:`, (window as any)[varName]);
-            const obj = (window as any)[varName];
-            if (obj && typeof obj === 'object') {
-              console.log(`  ${varName} Keys:`, Object.keys(obj));
-              if (obj.actions) console.log(`  ${varName} Actions:`, Object.keys(obj.actions));
-              if (obj.quickAuth) console.log(`  ${varName} QuickAuth:`, Object.keys(obj.quickAuth));
-            }
-          }
-        });
-          
-          // Look for any object that has actions.ready
-          let foundSDK = null;
-          for (const { name, sdk } of possibleSDKs) {
-            if (sdk && sdk.actions && sdk.actions.ready) {
-              foundSDK = sdk;
-              console.log(`✅ Found SDK with ready() method at ${name}:`, sdk);
-              break;
-            }
-          }
-          
-          if (foundSDK) {
-            console.log('Calling sdk.actions.ready()...');
-            foundSDK.actions.ready()
+        function waitForSDK() {
+          // Check if Farcaster SDK is available
+          if (window.FarcasterMiniApp && window.FarcasterMiniApp.actions) {
+            console.log('✅ Farcaster SDK detected, calling ready()...');
+            window.FarcasterMiniApp.actions.ready()
               .then(() => {
                 console.log('✅ Farcaster SDK ready() called successfully');
-                // Store the SDK globally for later use
-                window.FarcasterMiniApp = foundSDK;
               })
               .catch((error) => {
                 console.warn('❌ Farcaster SDK ready() failed:', error);
               });
-            return; // Stop retrying
+          } else {
+            // SDK not ready yet, check again in 100ms
+            setTimeout(waitForSDK, 100);
           }
-          
-          if (attempts >= maxAttempts) {
-            console.log('❌ Stopped trying to find Farcaster SDK after', maxAttempts, 'attempts');
-            console.log('Final window state:', {
-              allKeys: Object.keys(window).length,
-              farcasterKeys: Object.keys(window).filter(k => k.toLowerCase().includes('farcaster')),
-              miniappKeys: Object.keys(window).filter(k => k.toLowerCase().includes('miniapp')),
-              sdkKeys: Object.keys(window).filter(k => k.toLowerCase().includes('sdk'))
-            });
-            return;
-          }
-          
-          console.log(`SDK not found yet, retrying in 100ms... (${attempts}/${maxAttempts})`);
-          setTimeout(tryReady, 100);
         }
         
-        // Start trying
-        tryReady();
+        // Start waiting for SDK
+        waitForSDK();
       })();
     </script>
   </head>

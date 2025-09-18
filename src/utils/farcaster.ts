@@ -6,16 +6,8 @@ export const mockFarcasterUser = {
   address: "0x1234567890abcdef1234567890abcdef12345678"
 }
 
-// Import Farcaster SDK
-let sdk: any = null
-
-// Try to import the SDK dynamically
-try {
-  // This will work in Farcaster environment
-  sdk = (window as any).FarcasterMiniApp
-} catch (error) {
-  console.log("Farcaster SDK not available in global scope")
-}
+// Farcaster SDK should be automatically injected by Farcaster
+// We access it from the global window object
 
 // Check if we're in a Farcaster Mini App environment
 export function isFarcasterEnvironment() {
@@ -79,56 +71,15 @@ export function isFarcasterEnvironment() {
 export function getFarcasterSDK() {
   if (typeof window === "undefined") return null
   
-  try {
-    console.log("=== Comprehensive Farcaster SDK Detection ===")
-    console.log("Window object keys:", Object.keys(window).slice(0, 30))
-    console.log("Looking for Farcaster in window:", Object.keys(window).filter(k => k.toLowerCase().includes('farcaster')))
-    console.log("Looking for MiniApp in window:", Object.keys(window).filter(k => k.toLowerCase().includes('miniapp')))
-    console.log("Looking for SDK in window:", Object.keys(window).filter(k => k.toLowerCase().includes('sdk')))
-    
-    // Check multiple possible SDK locations
-    const possibleSDKs = [
-      { name: 'window.FarcasterMiniApp', sdk: (window as any).FarcasterMiniApp },
-      { name: 'window.farcaster', sdk: (window as any).farcaster },
-      { name: 'window.Farcaster', sdk: (window as any).Farcaster },
-      { name: 'window.MiniApp', sdk: (window as any).MiniApp },
-      { name: 'window.sdk', sdk: (window as any).sdk },
-      { name: 'window.FarcasterMiniApp?.sdk', sdk: (window as any).FarcasterMiniApp?.sdk },
-      { name: 'window.farcaster?.sdk', sdk: (window as any).farcaster?.sdk },
-      { name: 'window.Farcaster?.sdk', sdk: (window as any).Farcaster?.sdk }
-    ]
-    
-    for (const { name, sdk } of possibleSDKs) {
-      if (sdk) {
-        console.log(`Found potential SDK at ${name}:`, sdk)
-        console.log(`SDK structure:`, Object.keys(sdk))
-        
-        // Check if it has the expected methods
-        if (sdk.actions && sdk.actions.ready) {
-          console.log(`✅ Found valid SDK at ${name} with ready() method`)
-          console.log("SDK actions:", Object.keys(sdk.actions))
-          if (sdk.quickAuth) {
-            console.log("SDK quickAuth:", Object.keys(sdk.quickAuth))
-          }
-          return sdk
-        } else if (sdk.quickAuth) {
-          console.log(`✅ Found SDK at ${name} with quickAuth`)
-          console.log("SDK quickAuth:", Object.keys(sdk.quickAuth))
-          return sdk
-        } else {
-          console.log(`⚠️ SDK at ${name} doesn't have expected methods`)
-        }
-      }
-    }
-    
-    console.log("❌ No valid Farcaster SDK found in any expected location")
-    console.log("Available window properties with 'farcaster':", Object.keys(window).filter(key => key.toLowerCase().includes('farcaster')))
-    console.log("Available window properties with 'Farcaster':", Object.keys(window).filter(key => key.includes('Farcaster')))
-    
-  } catch (error) {
-    console.warn("Failed to get Farcaster SDK:", error)
+  // According to Farcaster docs, the SDK should be at window.FarcasterMiniApp
+  const sdk = (window as any).FarcasterMiniApp
+  
+  if (sdk && sdk.actions) {
+    console.log("✅ Farcaster SDK found at window.FarcasterMiniApp")
+    return sdk
   }
   
+  console.log("❌ Farcaster SDK not found at window.FarcasterMiniApp")
   return null
 }
 
