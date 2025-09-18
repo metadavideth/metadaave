@@ -114,11 +114,15 @@ export function useTokensWithBalances() {
     }
   })
 
+  // Check if we actually have real balances (not just mock data)
+  const hasRealBalances = balances && Object.values(balances).some(balance => balance !== '0')
+  const isConnected = hasRealBalances || (balances && Object.keys(balances).length > 0)
+
   return {
     tokens: enrichedTokens,
     isLoading: aaveLoading || balanceLoading,
     error: aaveError || balanceError,
-    isConnected: true, // Always connected when using Farcaster
+    isConnected,
     isUsingFallbackData
   }
 }

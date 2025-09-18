@@ -77,21 +77,17 @@ export function Header() {
               }
             }
           } else {
-            // SDK not available, use mock data
-            console.log("Farcaster SDK not available, using mock data")
+            // SDK not available, don't auto-connect
+            console.log("Farcaster SDK not available, user will need to connect manually")
             if (mounted) {
-              setUsername(mockFarcasterUser.username)
-              setAddress(mockFarcasterUser.address)
-              setIsConnected(true)
+              setError("Farcaster SDK not available. Please try connecting manually.")
             }
           }
         } else {
-          // Development mode or previewer - use mock data
-          console.log("Using mock data - not in Farcaster environment")
+          // Not in Farcaster environment, don't auto-connect
+          console.log("Not in Farcaster environment, user will need to connect manually")
           if (mounted) {
-            setUsername(mockFarcasterUser.username)
-            setAddress(mockFarcasterUser.address)
-            setIsConnected(true)
+            setError("Not in Farcaster environment. Please try connecting manually.")
           }
         }
       } catch (e: any) {
@@ -189,18 +185,14 @@ export function Header() {
             // Don't automatically fallback to mock data - let user retry
           }
         } else {
-          // SDK not available, use mock data
-          console.log("Farcaster SDK not available for connection, using mock data")
-          setUsername(mockFarcasterUser.username)
-          setAddress(mockFarcasterUser.address)
-          setIsConnected(true)
+          // SDK not available, don't auto-connect
+          console.log("Farcaster SDK not available for connection")
+          setError("Farcaster SDK not available. Please refresh and try again.")
         }
       } else {
-        // Development mode or previewer - use mock data
-        console.log("Using mock data for connection - not in Farcaster environment")
-        setUsername(mockFarcasterUser.username)
-        setAddress(mockFarcasterUser.address)
-        setIsConnected(true)
+        // Not in Farcaster environment, don't auto-connect
+        console.log("Not in Farcaster environment for connection")
+        setError("Not in Farcaster environment. Please access via Farcaster/Warpcast.")
       }
     } catch (e: any) {
       console.error("Connection error:", e)
