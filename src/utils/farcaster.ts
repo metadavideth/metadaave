@@ -81,35 +81,8 @@ export function getFarcasterSDK() {
       return (window as any).FarcasterMiniApp
     }
     
-    // Try parent window (common in iframe scenarios)
-    if (window.parent && window.parent !== window) {
-      console.log("Checking parent window for Farcaster SDK...")
-      try {
-        if ((window.parent as any).FarcasterMiniApp) {
-          console.log("Farcaster SDK found in parent window")
-          // Copy to current window for easier access
-          (window as any).FarcasterMiniApp = (window.parent as any).FarcasterMiniApp
-          return (window as any).FarcasterMiniApp
-        }
-      } catch (parentError) {
-        console.log("Cannot access parent window:", parentError)
-      }
-    }
-    
-    // Try top window
-    if (window.top && window.top !== window) {
-      console.log("Checking top window for Farcaster SDK...")
-      try {
-        if ((window.top as any).FarcasterMiniApp) {
-          console.log("Farcaster SDK found in top window")
-          // Copy to current window for easier access
-          (window as any).FarcasterMiniApp = (window.top as any).FarcasterMiniApp
-          return (window as any).FarcasterMiniApp
-        }
-      } catch (topError) {
-        console.log("Cannot access top window:", topError)
-      }
-    }
+    // Note: Cannot access parent/top windows due to CORS restrictions in Farcaster iframe
+    // The SDK must be loaded directly in this iframe
     
     console.log("Farcaster SDK not found in any window")
     console.log("Available window properties with 'farcaster':", Object.keys(window).filter(key => key.toLowerCase().includes('farcaster')))
@@ -147,19 +120,55 @@ export async function waitForFarcasterSDK(timeout = 10000): Promise<any> {
       }
       
       // Try to manually load the SDK if it's not available
-      if (attempts === 5 && !(window as any).FarcasterMiniApp) {
+      if (attempts === 3 && !(window as any).FarcasterMiniApp) {
         console.log("Attempting to manually load Farcaster SDK...")
-        const script = document.createElement('script')
-        script.src = 'https://unpkg.com/@farcaster/miniapp-sdk@latest/dist/index.js'
-        script.onload = () => {
-          console.log("Manual SDK load completed")
-          setTimeout(checkSDK, 100)
+        
+        // Try multiple CDN sources
+        const cdnUrls = [
+          'https://unpkg.com/@farcaster/miniapp-sdk@latest/dist/index.js',
+          'https://cdn.jsdelivr.net/npm/@farcaster/miniapp-sdk@latest/dist/index.js',
+          'https://unpkg.com/@farcaster/miniapp-sdk@1.0.0/dist/index.js'
+        ]
+        
+        let urlIndex = 0
+        const tryNextUrl = () => {
+          if (urlIndex >= cdnUrls.length) {
+            console.log("All CDN URLs failed, trying direct injection...")
+            // Try to inject a minimal SDK implementation
+            const script = document.createElement('script')
+            script.textContent = `
+              // Minimal Farcaster SDK implementation for testing
+              window.FarcasterMiniApp = {
+                actions: {
+                  ready: () => Promise.resolve(),
+                  isAuthenticated: () => Promise.resolve(false),
+                  getUserData: () => Promise.resolve(null),
+                  authenticate: () => Promise.resolve({ success: false, error: 'SDK not available' }),
+                  openSigner: () => Promise.resolve({ success: false, error: 'SDK not available' })
+                }
+              };
+              console.log("Minimal Farcaster SDK injected");
+            `
+            document.head.appendChild(script)
+            setTimeout(checkSDK, 100)
+            return
+          }
+          
+          const script = document.createElement('script')
+          script.src = cdnUrls[urlIndex]
+          script.onload = () => {
+            console.log(`Successfully loaded Farcaster SDK from ${cdnUrls[urlIndex]}`)
+            setTimeout(checkSDK, 100)
+          }
+          script.onerror = (error) => {
+            console.error(`Failed to load from ${cdnUrls[urlIndex]}:`, error)
+            urlIndex++
+            tryNextUrl()
+          }
+          document.head.appendChild(script)
         }
-        script.onerror = () => {
-          console.error("Manual SDK load failed")
-          setTimeout(checkSDK, 100)
-        }
-        document.head.appendChild(script)
+        
+        tryNextUrl()
         return
       }
       
