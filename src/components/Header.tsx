@@ -64,13 +64,16 @@ export function Header() {
                 console.log("User not authenticated, will need to connect")
               }
             } catch (sdkError) {
-              console.warn("SDK authentication check error:", sdkError)
-              // Fallback to mock data if SDK fails
+              console.error("SDK authentication check error:", sdkError)
+              console.error("Error details:", {
+                message: sdkError instanceof Error ? sdkError.message : 'Unknown error',
+                stack: sdkError instanceof Error ? sdkError.stack : undefined,
+                name: sdkError instanceof Error ? sdkError.name : undefined
+              })
+              // Don't fallback to mock data automatically - let user try to connect
               if (mounted) {
-                console.log("Falling back to mock data due to SDK error")
-                setUsername(mockFarcasterUser.username)
-                setAddress(mockFarcasterUser.address)
-                setIsConnected(true)
+                console.log("SDK error occurred, user will need to manually connect")
+                setError(`Farcaster SDK error: ${sdkError instanceof Error ? sdkError.message : 'Unknown error'}`)
               }
             }
           } else {
@@ -132,11 +135,35 @@ export function Header() {
           // We're in a Farcaster environment with SDK
           try {
             console.log("Attempting Farcaster authentication...")
-            // Use authenticate method for sign-in
-            const authResult = await sdk.actions.authenticate()
-            console.log("Farcaster authentication result:", authResult)
+            console.log("SDK actions available:", Object.keys(sdk.actions || {}))
             
-            if (authResult && authResult.success) {
+            // Try different authentication approaches
+            let authResult
+            try {
+              // First try the authenticate method
+              authResult = await sdk.actions.authenticate()
+              console.log("Farcaster authenticate() result:", authResult)
+            } catch (authError) {
+              console.warn("authenticate() failed, trying alternative approach:", authError)
+              // Try alternative authentication method
+              if (sdk.actions.openSigner) {
+                authResult = await sdk.actions.openSigner()
+                console.log("Farcaster openSigner() result:", authResult)
+              } else {
+                throw authError
+              }
+            }
+            
+            // Check if authentication was successful
+            const isAuthSuccess = authResult && (
+              authResult.success === true || 
+              authResult === true ||
+              (typeof authResult === 'object' && authResult.success !== false)
+            )
+            
+            console.log("Authentication success check:", isAuthSuccess)
+            
+            if (isAuthSuccess) {
               // Get user data after successful authentication
               const userData = await sdk.actions.getUserData()
               console.log("Farcaster user data after auth:", userData)
@@ -145,17 +172,21 @@ export function Header() {
                 setUsername(userData.username || "")
                 setAddress(userData.address || userData.verifiedAddresses?.[0] || "")
                 setIsConnected(true)
+              } else {
+                throw new Error("No user data received after authentication")
               }
             } else {
-              throw new Error("Authentication failed - no success response")
+              throw new Error(`Authentication failed - result: ${JSON.stringify(authResult)}`)
             }
           } catch (sdkError) {
-            console.warn("SDK auth error:", sdkError)
+            console.error("SDK auth error:", sdkError)
+            console.error("Auth error details:", {
+              message: sdkError instanceof Error ? sdkError.message : 'Unknown error',
+              stack: sdkError instanceof Error ? sdkError.stack : undefined,
+              name: sdkError instanceof Error ? sdkError.name : undefined
+            })
             setError(`Farcaster authentication failed: ${sdkError instanceof Error ? sdkError.message : 'Unknown error'}`)
-            // Fallback to mock data if SDK fails (for previewer)
-            setUsername(mockFarcasterUser.username)
-            setAddress(mockFarcasterUser.address)
-            setIsConnected(true)
+            // Don't automatically fallback to mock data - let user retry
           }
         } else {
           // SDK not available, use mock data
