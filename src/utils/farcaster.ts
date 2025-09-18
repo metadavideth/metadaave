@@ -89,10 +89,37 @@ export function getFarcasterSDK() {
     console.log("Available window properties with 'Farcaster':", Object.keys(window).filter(key => key.includes('Farcaster')))
     
     // Check if it might be under a different name
-    const possibleNames = ['FarcasterMiniApp', 'farcasterMiniApp', 'Farcaster', 'farcaster']
+    const possibleNames = ['FarcasterMiniApp', 'farcasterMiniApp', 'Farcaster', 'farcaster', 'MiniApp', 'miniApp']
     for (const name of possibleNames) {
       if ((window as any)[name]) {
         console.log(`Found potential SDK under name: ${name}`, (window as any)[name])
+        // If we find it under a different name, use it
+        if (name !== 'FarcasterMiniApp') {
+          (window as any).FarcasterMiniApp = (window as any)[name]
+          return (window as any).FarcasterMiniApp
+        }
+      }
+    }
+    
+    // Check if it might be nested deeper in the window object
+    const nestedPaths = [
+      'window.FarcasterMiniApp',
+      'window.farcaster.MiniApp',
+      'window.Farcaster.MiniApp',
+      'window.miniapp.Farcaster',
+      'window.farcaster.miniapp'
+    ]
+    
+    for (const path of nestedPaths) {
+      try {
+        const value = eval(path)
+        if (value) {
+          console.log(`Found SDK at nested path: ${path}`, value)
+          (window as any).FarcasterMiniApp = value
+          return (window as any).FarcasterMiniApp
+        }
+      } catch (e) {
+        // Path doesn't exist, continue
       }
     }
   } catch (error) {
@@ -120,14 +147,15 @@ export async function waitForFarcasterSDK(timeout = 10000): Promise<any> {
       }
       
       // Try to manually load the SDK if it's not available
-      if (attempts === 3 && !(window as any).FarcasterMiniApp) {
+      if (attempts === 2 && !(window as any).FarcasterMiniApp) {
         console.log("Attempting to manually load Farcaster SDK...")
         
-        // Try multiple CDN sources
+        // Try multiple CDN sources and versions
         const cdnUrls = [
-          'https://unpkg.com/@farcaster/miniapp-sdk@latest/dist/index.js',
           'https://cdn.jsdelivr.net/npm/@farcaster/miniapp-sdk@latest/dist/index.js',
-          'https://unpkg.com/@farcaster/miniapp-sdk@1.0.0/dist/index.js'
+          'https://unpkg.com/@farcaster/miniapp-sdk@1.0.0/dist/index.js',
+          'https://unpkg.com/@farcaster/miniapp-sdk@0.1.0/dist/index.js',
+          'https://unpkg.com/@farcaster/miniapp-sdk@latest/dist/index.js'
         ]
         
         let urlIndex = 0
