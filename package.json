@@ -9,6 +9,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@aave/contract-helpers": "^1.36.2",
+    "@aave/math-utils": "^1.36.2",
     "@aave/protocol-js": "^4.3.0",
     "@farcaster/miniapp-sdk": "^0.1.10",
     "@hookform/resolvers": "^3.9.1",

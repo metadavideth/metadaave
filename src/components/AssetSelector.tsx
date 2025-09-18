@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useTokensWithBalances } from "../hooks/useTokenBalances"
+import { useTokensWithAaveBase } from "../hooks/useAaveBase"
 import type { Token } from "../types"
 
 interface AssetSelectorProps {
@@ -11,7 +11,7 @@ interface AssetSelectorProps {
 
 export function AssetSelector({ selectedToken, onTokenSelect }: AssetSelectorProps) {
   const [localSelectedToken, setLocalSelectedToken] = useState<Token | null>(selectedToken || null)
-  const { tokens, isLoading, error, isConnected, isUsingFallbackData } = useTokensWithBalances()
+  const { tokens, isLoading, error, isConnected, isUsingFallbackData } = useTokensWithAaveBase()
 
   // Update local selected token when prop changes
   useEffect(() => {
@@ -125,7 +125,7 @@ export function AssetSelector({ selectedToken, onTokenSelect }: AssetSelectorPro
       {isUsingFallbackData && (
         <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-950 rounded-lg border border-yellow-200 dark:border-yellow-800">
           <div className="text-sm text-yellow-800 dark:text-yellow-200">
-            ⚠️ Using demo data - Aave SDK unavailable
+            ⚠️ Using demo data - Aave V3 Base contracts unavailable
           </div>
         </div>
       )}
@@ -133,7 +133,7 @@ export function AssetSelector({ selectedToken, onTokenSelect }: AssetSelectorPro
       {isConnected && !isUsingFallbackData && (
         <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-950 rounded-lg border border-blue-200 dark:border-blue-800">
           <div className="text-sm text-blue-800 dark:text-blue-200">
-            📊 Real-time data from Aave V3 SDK on Base
+            📊 Real-time data from Aave V3 contracts on Base
           </div>
         </div>
       )}
