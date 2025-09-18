@@ -31,7 +31,12 @@ interface AaveApiResponse {
 
 // Fetch Aave V3 data from our Vercel API endpoint
 async function fetchAaveReserveData(): Promise<ReserveData[]> {
-  const response = await fetch('/api/aave')
+  // Use Vercel API URL when running locally (including ngrok)
+  const apiUrl = window.location.hostname.includes('localhost') || window.location.hostname.includes('ngrok')
+    ? 'https://metadaave.vercel.app/api/aave'
+    : '/api/aave'
+  
+  const response = await fetch(apiUrl)
   
   if (!response.ok) {
     throw new Error(`API error: ${response.status}`)
