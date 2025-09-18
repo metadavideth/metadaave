@@ -16,31 +16,8 @@ const config = createConfig({
 
 const queryClient = new QueryClient()
 
-// Initialize Farcaster SDK when available
-function initializeFarcasterSDK() {
-  if (typeof window !== 'undefined' && (window as any).FarcasterMiniApp) {
-    const sdk = (window as any).FarcasterMiniApp
-    console.log("Farcaster SDK loaded:", sdk)
-
-    // Call ready() to hide the splash screen when interface is ready
-    if (sdk.actions && sdk.actions.ready) {
-      sdk.actions.ready()
-        .then(() => {
-          console.log("✅ Farcaster SDK ready() called - splash screen should hide")
-        })
-        .catch((error: any) => {
-          console.warn("❌ Farcaster SDK ready() failed:", error)
-        })
-    }
-  } else {
-    // In preview mode, SDK is not available so we can't call ready()
-    // This means the splash screen will persist - this is expected behavior
-    console.log("⚠️ Farcaster SDK not available - splash screen will persist in preview mode")
-  }
-}
-
-// Start initialization
-initializeFarcasterSDK()
+// Note: ready() is now called in App.tsx useEffect as per Farcaster docs
+// This ensures it's called when the React component is ready
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>

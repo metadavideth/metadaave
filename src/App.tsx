@@ -19,17 +19,28 @@ function App() {
   } | null>(null)
   const [selectedToken, setSelectedToken] = useState<Token>(AAVE_V3_BASE_TOKENS[0])
 
-  // Initialize Farcaster SDK when component mounts
+  // Call ready() when the interface is ready to be displayed
+  // This is the correct place according to Farcaster docs
   useEffect(() => {
-    if (typeof window !== 'undefined' && (window as any).FarcasterMiniApp) {
-      const sdk = (window as any).FarcasterMiniApp
-      console.log("App: Farcaster SDK available:", sdk)
-      
-      // The SDK is already initialized in main.tsx, so we just need to use it
-      if (sdk.actions) {
-        console.log("App: Farcaster SDK actions available:", sdk.actions)
+    const callReady = async () => {
+      if (typeof window !== 'undefined' && (window as any).FarcasterMiniApp) {
+        const sdk = (window as any).FarcasterMiniApp
+        console.log("✅ App: Farcaster SDK detected")
+        
+        if (sdk.actions && sdk.actions.ready) {
+          try {
+            await sdk.actions.ready()
+            console.log("✅ App: Farcaster SDK ready() called successfully - splash screen should hide")
+          } catch (error) {
+            console.warn("❌ App: Farcaster SDK ready() failed:", error)
+          }
+        }
+      } else {
+        console.log("⚠️ App: Farcaster SDK not available - splash screen will persist")
       }
     }
+
+    callReady()
   }, [])
 
   const handleTransactionSuccess = (action: string, amount: string, token: string) => {
