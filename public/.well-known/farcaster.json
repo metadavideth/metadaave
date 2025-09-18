@@ -1,17 +1,17 @@
 {
   "accountAssociation": {
-    "header": "eyJmaWQiOjEyMzQ1LCJ0eXBlIjoiY3VzdG9keSIsImtleSI6IjB4MTIzNDU2Nzg5MGFiY2RlZjEyMzQ1Njc4OTBhYmNkZWYxMjM0NTY3OCJ9",
-    "payload": "eyJkb21haW4iOiJtZXRhZGFhdmUtMmwxNDl3dXEwLWRhdmlkcy1wcm9qZWN0cy04NTIwZDY4Zi52ZXJjZWwuYXBwIn0=",
-    "signature": "MHhmMTUwMWRjZjRhM2U1NWE1ZjViNGQ5M2JlNGIxYjZiOGE0ZjcwYWQ5YTE1OTNmNDk1NzllNTA2YjJkZGZjYTBlMzI4ZmRiNDZmNmVjZmFhZTU4NjYwYzBiZDc4YjgzMzc2MDAzYTkxNzhkZGIyZGIyZmM5ZDYwYjU2YTlmYzdmMDFj"
+    "header": "eyJmaWQiOjI0MzgxOCwidHlwZSI6ImF1dGgiLCJrZXkiOiIweGUyZmQ2ZjBiOGMwRkMwOTk5YUMyQTM2ZjY3QzA3ZTZGQjEwNjg5MjYifQ",
+    "payload": "eyJkb21haW4iOiJtZXRhZGFhdmUudmVyY2VsLmFwcCJ9",
+    "signature": "U1cMYVacfOJedbEPvXNMk7Wxq8auywLWniGFBGbIhYhM/7bXqUr/k83pj4+l38QPbYV4dm6C8qKkxY1dVbYaPxw="
   },
   "frame": {
     "version": "1",
     "name": "metadaave",
-    "iconUrl": "https://metadaave-2l149wuq0-davids-projects-8520d68f.vercel.app/placeholder-logo.png",
-    "homeUrl": "https://metadaave-2l149wuq0-davids-projects-8520d68f.vercel.app",
-    "imageUrl": "https://metadaave-2l149wuq0-davids-projects-8520d68f.vercel.app/placeholder-logo.png",
+    "iconUrl": "https://metadaave.vercel.app/placeholder-logo.png",
+    "homeUrl": "https://metadaave.vercel.app",
+    "imageUrl": "https://metadaave.vercel.app/placeholder-logo.png",
     "buttonTitle": "Open metadaave",
-    "splashImageUrl": "https://metadaave-2l149wuq0-davids-projects-8520d68f.vercel.app/placeholder-logo.png",
+    "splashImageUrl": "https://metadaave.vercel.app/placeholder-logo.png",
     "splashBackgroundColor": "#FFFFFF"
   }
 }
