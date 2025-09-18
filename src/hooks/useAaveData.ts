@@ -7,11 +7,11 @@ import type { Token } from '../types'
 // Try multiple Aave data sources
 const AAVE_DATA_SOURCES = [
   {
-    name: 'Aave V3 Official API',
-    url: 'https://api.v3.aave.com/graphql',
+    name: 'Aave V3 The Graph (Ethereum)',
+    url: 'https://api.thegraph.com/subgraphs/name/aave/protocol-v3',
     query: `
-      query GetReserveData($chainId: Int!) {
-        reserves(chainId: $chainId) {
+      query GetReserveData($reserveAddresses: [String!]!) {
+        reserves(where: { underlyingAsset_in: $reserveAddresses, isActive: true }) {
           id
           underlyingAsset
           symbol
@@ -23,15 +23,14 @@ const AAVE_DATA_SOURCES = [
           totalCurrentVariableDebt
           priceInEth
           priceInUsd
-          isActive
         }
       }
     `,
-    variables: { chainId: 8453 }
+    variables: () => ({ reserveAddresses: AAVE_V3_BASE_TOKENS.map(token => token.address.toLowerCase()) })
   },
   {
-    name: 'Aave V3 The Graph (Ethereum)',
-    url: 'https://api.thegraph.com/subgraphs/name/aave/protocol-v3',
+    name: 'Aave V3 The Graph (Polygon)',
+    url: 'https://api.thegraph.com/subgraphs/name/aave/protocol-v3-polygon',
     query: `
       query GetReserveData($reserveAddresses: [String!]!) {
         reserves(where: { underlyingAsset_in: $reserveAddresses, isActive: true }) {
@@ -142,16 +141,18 @@ async function fetchAaveReserveData(): Promise<ReserveData[]> {
         if (data.data?.reserves?.length > 0) {
           console.log(`Successfully fetched data from ${source.name}`)
           
-          // For Base-specific data, filter to our tokens
-          if (source.name.includes('Official API')) {
-            const ourTokenAddresses = AAVE_V3_BASE_TOKENS.map(token => token.address.toLowerCase())
-            const filteredReserves = data.data.reserves.filter(reserve => 
-              ourTokenAddresses.includes(reserve.underlyingAsset.toLowerCase())
-            )
+          // For any data source, filter to our tokens and use as reference
+          const ourTokenAddresses = AAVE_V3_BASE_TOKENS.map(token => token.address.toLowerCase())
+          const filteredReserves = data.data.reserves.filter(reserve => 
+            ourTokenAddresses.includes(reserve.underlyingAsset.toLowerCase())
+          )
+          
+          // If we found matching tokens, return them
+          if (filteredReserves.length > 0) {
             return filteredReserves
           }
           
-          // For Ethereum data, return as-is (we'll use it as reference)
+          // If no exact matches, return all reserves as reference data
           return data.data.reserves
         }
       }

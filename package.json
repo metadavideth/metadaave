@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@aave/protocol-js": "^4.3.0",
     "@farcaster/miniapp-sdk": "^0.1.10",
     "@hookform/resolvers": "^3.9.1",
     "@metamask/sdk": "^0.33.1",
