@@ -14,6 +14,8 @@ export function Header() {
   const [address, setAddress] = useState<string>("")
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [debugInfo, setDebugInfo] = useState<any>(null)
+  const [showDebug, setShowDebug] = useState(false)
 
   useEffect(() => {
     let mounted = true
@@ -25,11 +27,25 @@ export function Header() {
         // Check if we should try Farcaster environment
         const isFarcasterEnv = isFarcasterEnvironment()
         
-        console.log("Farcaster environment check:", {
+        // Collect debug information
+        const debugData = {
           isFarcasterEnv,
           hostname: window.location.hostname,
-          hasFarcasterSDK: !!(window as any).FarcasterMiniApp
-        })
+          hasFarcasterSDK: !!(window as any).FarcasterMiniApp,
+          isIframe: window.self !== window.top,
+          userAgent: navigator.userAgent,
+          referrer: document.referrer,
+          searchParams: window.location.search,
+          windowKeys: Object.keys(window).slice(0, 10),
+          scripts: Array.from(document.scripts).map(s => s.src),
+          timestamp: new Date().toISOString()
+        }
+        
+        if (mounted) {
+          setDebugInfo(debugData)
+        }
+        
+        console.log("Farcaster environment check:", debugData)
         
         if (isFarcasterEnv) {
           // Try to get Farcaster SDK, waiting for it to load if needed
@@ -264,6 +280,14 @@ export function Header() {
               {isLoading ? "Loading..." : "Connect with Farcaster"}
             </button>
           )}
+          
+          {/* Debug toggle button */}
+          <button
+            onClick={() => setShowDebug(!showDebug)}
+            className="bg-gray-500 text-white rounded-lg px-3 py-2 text-xs hover:bg-gray-600 transition-colors"
+          >
+            {showDebug ? "Hide Debug" : "Show Debug"}
+          </button>
         </div>
       </div>
       {error ? (
@@ -271,6 +295,25 @@ export function Header() {
           {error}
         </div>
       ) : null}
+      
+      {/* Debug Panel */}
+      {showDebug && debugInfo && (
+        <div className="mt-4 p-4 bg-gray-900 text-white text-xs rounded-lg">
+          <h3 className="font-bold mb-2">🐛 Debug Information</h3>
+          <div className="space-y-1">
+            <div><strong>Environment:</strong> {debugInfo.isFarcasterEnv ? "✅ Farcaster" : "❌ Not Farcaster"}</div>
+            <div><strong>Hostname:</strong> {debugInfo.hostname}</div>
+            <div><strong>Is Iframe:</strong> {debugInfo.isIframe ? "✅ Yes" : "❌ No"}</div>
+            <div><strong>Has SDK:</strong> {debugInfo.hasFarcasterSDK ? "✅ Yes" : "❌ No"}</div>
+            <div><strong>Referrer:</strong> {debugInfo.referrer || "None"}</div>
+            <div><strong>Search Params:</strong> {debugInfo.searchParams || "None"}</div>
+            <div><strong>User Agent:</strong> {debugInfo.userAgent.substring(0, 50)}...</div>
+            <div><strong>Window Keys:</strong> {debugInfo.windowKeys.join(", ")}</div>
+            <div><strong>Scripts:</strong> {debugInfo.scripts.length} loaded</div>
+            <div><strong>Timestamp:</strong> {debugInfo.timestamp}</div>
+          </div>
+        </div>
+      )}
     </header>
   )
 }
