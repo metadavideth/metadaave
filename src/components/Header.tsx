@@ -24,25 +24,41 @@ export function Header() {
         
         // Get Farcaster SDK
         const sdk = getFarcasterSDK()
+        const isFarcasterEnv = isFarcasterEnvironment()
         
-        if (sdk && isFarcasterEnvironment()) {
+        console.log("Farcaster environment check:", {
+          sdk: !!sdk,
+          isFarcasterEnv,
+          hostname: window.location.hostname,
+          hasFarcasterSDK: !!(window as any).FarcasterMiniApp
+        })
+        
+        if (sdk && isFarcasterEnv) {
           // We're in a Farcaster environment with SDK
           try {
+            console.log("Attempting Farcaster authentication...")
             // Check if user is already authenticated
             const isAuthenticated = await sdk.actions.isAuthenticated()
+            console.log("Farcaster authentication status:", isAuthenticated)
+            
             if (isAuthenticated) {
               // Get user data
               const userData = await sdk.actions.getUserData()
+              console.log("Farcaster user data:", userData)
+              
               if (mounted && userData) {
                 setUsername(userData.username || "")
-                setAddress(userData.address || "")
+                setAddress(userData.address || userData.verifiedAddresses?.[0] || "")
                 setIsConnected(true)
               }
+            } else {
+              console.log("User not authenticated, will need to connect")
             }
           } catch (sdkError) {
             console.warn("SDK authentication check error:", sdkError)
             // Fallback to mock data if SDK fails
             if (mounted) {
+              console.log("Falling back to mock data due to SDK error")
               setUsername(mockFarcasterUser.username)
               setAddress(mockFarcasterUser.address)
               setIsConnected(true)
@@ -50,6 +66,7 @@ export function Header() {
           }
         } else {
           // Development mode or previewer - use mock data
+          console.log("Using mock data - not in Farcaster environment")
           if (mounted) {
             setUsername(mockFarcasterUser.username)
             setAddress(mockFarcasterUser.address)
@@ -72,28 +89,42 @@ export function Header() {
   const handleConnect = async () => {
     try {
       setIsLoading(true)
+      setError(null)
       
       // Get Farcaster SDK
       const sdk = getFarcasterSDK()
+      const isFarcasterEnv = isFarcasterEnvironment()
       
-      if (sdk && isFarcasterEnvironment()) {
+      console.log("Connect attempt - Farcaster environment check:", {
+        sdk: !!sdk,
+        isFarcasterEnv,
+        hostname: window.location.hostname
+      })
+      
+      if (sdk && isFarcasterEnv) {
         // We're in a Farcaster environment with SDK
         try {
+          console.log("Attempting Farcaster authentication...")
           // Use authenticate method for sign-in
           const authResult = await sdk.actions.authenticate()
+          console.log("Farcaster authentication result:", authResult)
+          
           if (authResult && authResult.success) {
             // Get user data after successful authentication
             const userData = await sdk.actions.getUserData()
+            console.log("Farcaster user data after auth:", userData)
+            
             if (userData) {
               setUsername(userData.username || "")
-              setAddress(userData.address || "")
+              setAddress(userData.address || userData.verifiedAddresses?.[0] || "")
               setIsConnected(true)
             }
           } else {
-            throw new Error("Authentication failed")
+            throw new Error("Authentication failed - no success response")
           }
         } catch (sdkError) {
           console.warn("SDK auth error:", sdkError)
+          setError(`Farcaster authentication failed: ${sdkError instanceof Error ? sdkError.message : 'Unknown error'}`)
           // Fallback to mock data if SDK fails (for previewer)
           setUsername(mockFarcasterUser.username)
           setAddress(mockFarcasterUser.address)
@@ -101,11 +132,13 @@ export function Header() {
         }
       } else {
         // Development mode or previewer - use mock data
+        console.log("Using mock data for connection - not in Farcaster environment")
         setUsername(mockFarcasterUser.username)
         setAddress(mockFarcasterUser.address)
         setIsConnected(true)
       }
     } catch (e: any) {
+      console.error("Connection error:", e)
       setError(e?.message ?? "Failed to authenticate with Farcaster")
     } finally {
       setIsLoading(false)

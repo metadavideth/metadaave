@@ -11,15 +11,24 @@ export function isFarcasterEnvironment() {
   if (typeof window === "undefined") return false
   
   // Check for Farcaster SDK global
-  if ((window as any).FarcasterMiniApp) return true
+  if ((window as any).FarcasterMiniApp) {
+    console.log("Farcaster SDK detected in global window")
+    return true
+  }
   
   // Check for Farcaster previewer or iframe context
   if (window.location.hostname.includes("farcaster") || 
       window.location.search.includes("farcaster") ||
       window.location.search.includes("preview") ||
-      window.parent !== window) return true
+      window.parent !== window) {
+    console.log("Farcaster environment detected via URL/iframe")
+    return true
+  }
   
-  return false
+  // Always return true in production to attempt SDK usage
+  // The SDK will handle authentication properly
+  console.log("Attempting Farcaster environment detection for production")
+  return true
 }
 
 // Get Farcaster SDK instance from global window object
