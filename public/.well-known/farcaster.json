@@ -1,9 +1,4 @@
 {
-  "accountAssociation": {
-    "header": "eyJmaWQiOjI0MzgxOCwidHlwZSI6ImF1dGgiLCJrZXkiOiIweGUyZmQ2ZjBiOGMwRkMwOTk5YUMyQTM2ZjY3QzA3ZTZGQjEwNjg5MjYifQ",
-    "payload": "eyJkb21haW4iOiJtZXRhZGFhdmUudmVyY2VsLmFwcCJ9",
-    "signature": "U1cMYVacfOJedbEPvXNMk7Wxq8auywLWniGFBGbIhYhM/7bXqUr/k83pj4+l38QPbYV4dm6C8qKkxY1dVbYaPxw="
-  },
   "frame": {
     "version": "1",
     "name": "metadaave",
