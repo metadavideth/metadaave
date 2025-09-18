@@ -1,14 +1,15 @@
 import { useQuery } from '@tanstack/react-query'
 import { useAccount } from 'wagmi'
 import { createPublicClient, http, formatUnits, erc20Abi } from 'viem'
-import { base } from 'viem/chains'
+import { baseSepolia } from 'viem/chains'
 import { AAVE_V3_BASE_TOKENS } from '../data/tokens'
 import { useEnrichedTokens } from './useAaveData'
+import { getAuthenticatedAddress } from '../utils/farcaster'
 import type { Token } from '../types'
 
-// Create a public client for Base
+// Create a public client for Base Sepolia
 const publicClient = createPublicClient({
-  chain: base,
+  chain: baseSepolia,
   transport: http()
 })
 
@@ -51,29 +52,41 @@ async function fetchTokenBalance(
   }
 }
 
-// Fetch all token balances for a user
-async function fetchAllTokenBalances(userAddress: string): Promise<Record<string, string>> {
-  const balancePromises = AAVE_V3_BASE_TOKENS.map(async (token) => {
-    const balance = await fetchTokenBalance(token.address, userAddress, token.decimals || 18)
-    return { address: token.address, balance }
-  })
+// Fetch all token balances for a user using Farcaster wallet
+async function fetchAllTokenBalances(): Promise<Record<string, string>> {
+  try {
+    // Get the authenticated Farcaster wallet address
+    const userAddress = await getAuthenticatedAddress()
+    
+    if (!userAddress) {
+      console.warn('No authenticated Farcaster address found')
+      return {}
+    }
 
-  const results = await Promise.all(balancePromises)
-  
-  return results.reduce((acc, { address, balance }) => {
-    acc[address.toLowerCase()] = balance
-    return acc
-  }, {} as Record<string, string>)
+    console.log('Fetching token balances for Farcaster wallet:', userAddress)
+
+    const balancePromises = AAVE_V3_BASE_TOKENS.map(async (token) => {
+      const balance = await fetchTokenBalance(token.address, userAddress, token.decimals || 18)
+      return { address: token.address, balance }
+    })
+
+    const results = await Promise.all(balancePromises)
+    
+    return results.reduce((acc, { address, balance }) => {
+      acc[address.toLowerCase()] = balance
+      return acc
+    }, {} as Record<string, string>)
+  } catch (error) {
+    console.error('Error fetching token balances:', error)
+    return {}
+  }
 }
 
-// Hook to get user token balances
+// Hook to get user token balances using Farcaster wallet
 export function useTokenBalances() {
-  const { address, isConnected } = useAccount()
-
   return useQuery({
-    queryKey: ['token-balances', address],
-    queryFn: () => fetchAllTokenBalances(address!),
-    enabled: !!address && isConnected,
+    queryKey: ['token-balances', 'farcaster'],
+    queryFn: fetchAllTokenBalances,
     staleTime: 10000, // 10 seconds
     refetchInterval: 30000, // Refetch every 30 seconds
     retry: 2,
@@ -84,7 +97,6 @@ export function useTokenBalances() {
 export function useTokensWithBalances() {
   const { tokens, isLoading: aaveLoading, error: aaveError, isUsingFallbackData } = useEnrichedTokens()
   const { data: balances, isLoading: balanceLoading, error: balanceError } = useTokenBalances()
-  const { address, isConnected } = useAccount()
 
   const enrichedTokens: Token[] = tokens.map(token => {
     const userBalance = balances?.[token.address.toLowerCase()] || '0'
@@ -96,9 +108,9 @@ export function useTokensWithBalances() {
       ...token,
       userBalance,
       userBalanceFormatted,
-      balance: isConnected && userBalance !== '0' 
+      balance: userBalance !== '0' 
         ? `${userBalanceFormatted} ${token.symbol}`
-        : token.balance // Fallback to mock data if not connected
+        : token.balance // Fallback to mock data if no balance
     }
   })
 
@@ -106,7 +118,7 @@ export function useTokensWithBalances() {
     tokens: enrichedTokens,
     isLoading: aaveLoading || balanceLoading,
     error: aaveError || balanceError,
-    isConnected,
+    isConnected: true, // Always connected when using Farcaster
     isUsingFallbackData
   }
 }
