@@ -52,38 +52,38 @@ export function SocialModal({ isOpen, onClose, action, amount, token }: SocialMo
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-      <div className="bg-background-secondary border border-gray-700 rounded-xl p-6 max-w-sm w-full">
+      <div className="bg-card border border-border rounded-xl p-6 max-w-sm w-full shadow-lg">
         {/* Success Header */}
         <div className="text-center mb-6">
-          <div className="w-16 h-16 bg-green-900/20 border border-green-700 rounded-full flex items-center justify-center mx-auto mb-3">
+          <div className="w-16 h-16 bg-green-500/20 border border-green-500/30 rounded-full flex items-center justify-center mx-auto mb-3">
             <span className="text-2xl">{getActionEmoji(action)}</span>
           </div>
-          <h3 className="text-lg font-semibold text-white mb-1">Transaction Successful!</h3>
-          <p className="text-gray-400 text-sm">
+          <h3 className="text-lg font-semibold text-card-foreground mb-1">Transaction Successful!</h3>
+          <p className="text-muted-foreground text-sm">
             {getActionText(action)} {amount} {token}
           </p>
         </div>
 
         {/* Transaction Details */}
-        <div className="bg-background rounded-lg p-3 border border-gray-700 mb-6">
+        <div className="bg-muted/50 rounded-lg p-3 border border-border mb-6">
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
-              <span className="text-gray-400">Action:</span>
-              <span className="text-white capitalize">{action}</span>
+              <span className="text-muted-foreground">Action:</span>
+              <span className="text-card-foreground capitalize">{action}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-400">Amount:</span>
-              <span className="text-white">
+              <span className="text-muted-foreground">Amount:</span>
+              <span className="text-card-foreground">
                 {amount} {token}
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-400">Network:</span>
-              <span className="text-white">Base</span>
+              <span className="text-muted-foreground">Network:</span>
+              <span className="text-card-foreground">Base</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-400">Status:</span>
-              <span className="text-green-400">Confirmed</span>
+              <span className="text-muted-foreground">Status:</span>
+              <span className="text-green-500">Confirmed</span>
             </div>
           </div>
         </div>
@@ -91,7 +91,7 @@ export function SocialModal({ isOpen, onClose, action, amount, token }: SocialMo
         <div className="flex space-x-3">
           <button
             onClick={handleShareToFarcaster}
-            className="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-2"
+            className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-2"
           >
             <span>🟣</span>
             <span>Share to Farcaster</span>
@@ -99,14 +99,14 @@ export function SocialModal({ isOpen, onClose, action, amount, token }: SocialMo
 
           <button
             onClick={onClose}
-            className="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-medium py-3 px-4 rounded-lg transition-colors"
+            className="flex-1 bg-secondary hover:bg-secondary/80 text-secondary-foreground font-medium py-3 px-4 rounded-lg transition-colors"
           >
             Close
           </button>
         </div>
 
         {/* Close Button */}
-        <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-white">
+        <button onClick={onClose} className="absolute top-4 right-4 text-muted-foreground hover:text-card-foreground transition-colors">
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
