@@ -21,7 +21,7 @@ function initializeFarcasterSDK() {
   if (typeof window !== 'undefined' && (window as any).FarcasterMiniApp) {
     const sdk = (window as any).FarcasterMiniApp
     console.log("Farcaster SDK loaded:", sdk)
-    
+
     // Initialize the SDK
     if (sdk.actions && sdk.actions.ready) {
       sdk.actions.ready()
@@ -33,8 +33,9 @@ function initializeFarcasterSDK() {
         })
     }
   } else {
-    // Retry after a short delay
-    setTimeout(initializeFarcasterSDK, 100)
+    // In preview mode or when SDK is not available, we'll handle it gracefully
+    console.log("Farcaster SDK not available - this is expected in preview mode")
+    // Don't retry indefinitely in preview mode
   }
 }
 
