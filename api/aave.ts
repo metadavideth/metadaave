@@ -1,7 +1,6 @@
 import { VercelRequest, VercelResponse } from '@vercel/node'
-import { UiPoolDataProvider } from '@aave/contract-helpers'
-import { formatReserves } from '@aave/math-utils'
-import { ethers } from 'ethers'
+import { createPublicClient, http, formatUnits } from 'viem'
+import { base } from 'viem/chains'
 
 // Base network configuration
 const BASE_CHAIN_ID = 8453
@@ -77,49 +76,109 @@ const MOCK_RESERVE_DATA: ReserveData[] = [
   }
 ]
 
+// Aave V3 Pool ABI - minimal for getReserveData
+const AAVE_V3_POOL_ABI = [
+  {
+    inputs: [{ name: 'asset', type: 'address' }],
+    name: 'getReserveData',
+    outputs: [
+      { name: 'configuration', type: 'tuple' },
+      { name: 'liquidityIndex', type: 'uint128' },
+      { name: 'currentLiquidityRate', type: 'uint128' },
+      { name: 'currentVariableBorrowRate', type: 'uint128' },
+      { name: 'currentStableBorrowRate', type: 'uint128' },
+      { name: 'lastUpdateTimestamp', type: 'uint40' },
+      { name: 'id', type: 'uint16' },
+      { name: 'aTokenAddress', type: 'address' },
+      { name: 'stableDebtTokenAddress', type: 'address' },
+      { name: 'variableDebtTokenAddress', type: 'address' },
+      { name: 'interestRateStrategyAddress', type: 'address' },
+      { name: 'accruedToTreasury', type: 'uint128' },
+      { name: 'unbacked', type: 'uint128' },
+      { name: 'isolationModeTotalDebt', type: 'uint128' }
+    ],
+    stateMutability: 'view',
+    type: 'function'
+  }
+] as const
+
+// ERC20 ABI for decimals
+const ERC20_ABI = [
+  {
+    inputs: [],
+    name: 'decimals',
+    outputs: [{ name: '', type: 'uint8' }],
+    stateMutability: 'view',
+    type: 'function'
+  }
+] as const
+
 async function fetchAaveReserveData(): Promise<ReserveData[]> {
   try {
-    console.log('Fetching Aave V3 data using Aave SDK...')
+    console.log('Fetching Aave V3 data using direct contract calls...')
     
-    // Create provider for Base network
-    const provider = new ethers.JsonRpcProvider(BASE_RPC_URL)
-    
-    // Initialize UiPoolDataProvider
-    const poolDataProviderContract = new UiPoolDataProvider({
-      uiPoolDataProviderAddress: UI_POOL_DATA_PROVIDER_ADDRESS,
-      provider,
-      chainId: BASE_CHAIN_ID,
+    // Create viem client for Base
+    const client = createPublicClient({
+      chain: base,
+      transport: http(BASE_RPC_URL)
     })
 
-    // Get reserves data
-    const reservesData = await poolDataProviderContract.getReservesHumanized({
-      lendingPoolAddressProvider: '0xe20fCBdBfFC4Dd138cE8b2E6FBb6CB49777ad64D', // Pool Address Provider
-    })
+    const reserves: ReserveData[] = []
 
-    console.log(`Successfully fetched ${reservesData.reservesData.length} reserves using Aave SDK`)
+    // Fetch data for each token
+    for (const [symbol, address] of Object.entries(BASE_TOKEN_ADDRESSES)) {
+      try {
+        // Get reserve data from Aave V3 Pool
+        const reserveData = await client.readContract({
+          address: AAVE_V3_POOL_ADDRESS as `0x${string}`,
+          abi: AAVE_V3_POOL_ABI,
+          functionName: 'getReserveData',
+          args: [address as `0x${string}`]
+        })
 
-    // Convert to our format
-    const reserves: ReserveData[] = reservesData.reservesData.map((reserve: any) => ({
-      id: reserve.underlyingAsset,
-      underlyingAsset: reserve.underlyingAsset,
-      symbol: reserve.symbol,
-      name: reserve.name,
-      decimals: reserve.decimals,
-      liquidityRate: reserve.liquidityRate,
-      variableBorrowRate: reserve.variableBorrowRate,
-      totalLiquidity: reserve.totalLiquidity,
-      totalCurrentVariableDebt: reserve.totalCurrentVariableDebt,
-      priceInEth: reserve.priceInEth,
-      priceInUsd: reserve.priceInUsd,
-      isActive: reserve.isActive,
-      supplyAPY: parseFloat(reserve.liquidityRate) * 100,
-      borrowAPY: parseFloat(reserve.variableBorrowRate) * 100,
-      isUsingFallbackData: false
-    }))
+        // Get token decimals
+        const decimals = await client.readContract({
+          address: address as `0x${string}`,
+          abi: ERC20_ABI,
+          functionName: 'decimals'
+        })
 
-    return reserves
+        // Convert rates from ray (27 decimals) to APY percentages
+        const supplyAPY = (Number(reserveData[2]) / 1e25) * 100 // currentLiquidityRate
+        const borrowAPY = (Number(reserveData[3]) / 1e25) * 100 // currentVariableBorrowRate
+
+        reserves.push({
+          id: address,
+          underlyingAsset: address,
+          symbol: symbol,
+          name: symbol === 'ETH' ? 'Wrapped Ether' : symbol === 'USDC' ? 'USD Coin' : symbol,
+          decimals: Number(decimals),
+          liquidityRate: reserveData[2].toString(),
+          variableBorrowRate: reserveData[3].toString(),
+          totalLiquidity: '0', // Not needed for our use case
+          totalCurrentVariableDebt: '0', // Not needed for our use case
+          priceInEth: '1',
+          priceInUsd: '1',
+          isActive: true,
+          supplyAPY: Number(supplyAPY.toFixed(4)),
+          borrowAPY: Number(borrowAPY.toFixed(4)),
+          isUsingFallbackData: false
+        })
+
+        console.log(`Fetched data for ${symbol}: ${supplyAPY.toFixed(2)}% supply, ${borrowAPY.toFixed(2)}% borrow`)
+      } catch (error) {
+        console.warn(`Failed to fetch data for ${symbol}:`, error)
+      }
+    }
+
+    if (reserves.length > 0) {
+      console.log(`Successfully fetched data for ${reserves.length} tokens using direct contract calls`)
+      return reserves
+    } else {
+      throw new Error('No reserves data fetched')
+    }
   } catch (error) {
-    console.error('Error fetching from Aave SDK:', error)
+    console.error('Error fetching from contracts:', error)
     console.log('Falling back to mock data')
     return MOCK_RESERVE_DATA
   }
