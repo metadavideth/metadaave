@@ -88,6 +88,8 @@ export function getFarcasterSDK() {
     if ((window as any).FarcasterMiniApp) {
       console.log("Farcaster SDK found in current window")
       console.log("SDK structure:", Object.keys((window as any).FarcasterMiniApp))
+      console.log("SDK actions:", (window as any).FarcasterMiniApp.actions ? Object.keys((window as any).FarcasterMiniApp.actions) : 'No actions')
+      console.log("SDK quickAuth:", (window as any).FarcasterMiniApp.quickAuth ? Object.keys((window as any).FarcasterMiniApp.quickAuth) : 'No quickAuth')
       return (window as any).FarcasterMiniApp
     }
     
@@ -99,6 +101,19 @@ export function getFarcasterSDK() {
         return (window as any)[name]
       }
     }
+    
+    // Check if SDK might be loaded asynchronously
+    console.log("Checking for async loaded SDK...")
+    const checkAsync = () => {
+      if ((window as any).FarcasterMiniApp) {
+        console.log("Farcaster SDK found after async check")
+        return (window as any).FarcasterMiniApp
+      }
+      return null
+    }
+    
+    // Try checking again after a short delay
+    setTimeout(checkAsync, 100)
     
     console.log("Farcaster SDK not found in window")
     console.log("Available window properties with 'farcaster':", Object.keys(window).filter(key => key.toLowerCase().includes('farcaster')))

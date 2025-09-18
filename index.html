@@ -7,6 +7,37 @@
     <meta name="description" content="metadaave - DeFi lending on Base via Farcaster" />
     <meta name="fc:miniapp" content='{"version":"1","imageUrl":"https://metadaave.vercel.app/placeholder-logo.png","button":{"title":"Open metadaave","action":{"type":"launch_frame","name":"metadaave","url":"https://metadaave.vercel.app","splashImageUrl":"https://metadaave.vercel.app/placeholder-logo.png","splashBackgroundColor":"#FFFFFF"}}}' />
     <title>metadaave</title>
+    <!-- Preconnect to Farcaster Auth Server for better performance -->
+    <link rel="preconnect" href="https://auth.farcaster.xyz" />
+    <script>
+      // Call sdk.actions.ready() immediately when the page loads
+      // This prevents the splash screen from persisting
+      (function() {
+        console.log('Checking for Farcaster SDK on page load...');
+        
+        function tryReady() {
+          if (window.FarcasterMiniApp && window.FarcasterMiniApp.actions && window.FarcasterMiniApp.actions.ready) {
+            console.log('Found Farcaster SDK, calling ready()...');
+            window.FarcasterMiniApp.actions.ready()
+              .then(() => {
+                console.log('Farcaster SDK ready() called successfully');
+              })
+              .catch((error) => {
+                console.warn('Farcaster SDK ready() failed:', error);
+              });
+          } else {
+            console.log('Farcaster SDK not found yet, retrying...');
+            setTimeout(tryReady, 100);
+          }
+        }
+        
+        // Try immediately and then retry every 100ms for up to 5 seconds
+        tryReady();
+        setTimeout(() => {
+          console.log('Stopped trying to call Farcaster SDK ready()');
+        }, 5000);
+      })();
+    </script>
   </head>
   <body class="text-white">
     <div id="root"></div>
