@@ -2,17 +2,17 @@ import { VercelRequest, VercelResponse } from '@vercel/node'
 import { UiPoolDataProvider } from '@aave/contract-helpers'
 import { ethers } from 'ethers'
 
-// Base Sepolia testnet configuration
-const BASE_SEPOLIA_CHAIN_ID = 84532
-const BASE_SEPOLIA_RPC_URL = 'https://sepolia.base.org'
+// Base mainnet configuration (for data fetching - Aave V3 is fully deployed here)
+const BASE_CHAIN_ID = 8453
+const BASE_RPC_URL = 'https://mainnet.base.org'
 
-// Aave V3 Pool addresses on Base Sepolia (from Aave Address Book)
-const AAVE_V3_POOL_ADDRESS = '0x6Ae43d3271ff6888e7Fc43Fd7321a503ff738951'
+// Aave V3 Pool addresses on Base (from Aave Address Book)
+const AAVE_V3_POOL_ADDRESS = '0xA238Dd80C259a72e81d7e4664a9801593F98d1c5'
 const UI_POOL_DATA_PROVIDER_ADDRESS = '0x68100bD5345eA474D93577127C11F39FF8463e93'
 
-// Token addresses on Base Sepolia
-const BASE_SEPOLIA_TOKEN_ADDRESSES = {
-  USDC: '0x036CbD53842c5426634e7929541eC2318f3dCF7e',
+// Token addresses on Base
+const BASE_TOKEN_ADDRESSES = {
+  USDC: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
   ETH: '0x4200000000000000000000000000000000000006', // WETH
   DAI: '0x50c5725949A6F0c72E6C4a641F24049A917DB0Cb',
   USDT: '0x50c5725949A6F0c72E6C4a641F24049A917DB0Cb', // Using DAI as placeholder
@@ -37,11 +37,11 @@ interface ReserveData {
   isUsingFallbackData: boolean
 }
 
-// Fallback mock data for Base Sepolia
+// Fallback mock data for Base
 const MOCK_RESERVE_DATA: ReserveData[] = [
   {
-    id: BASE_SEPOLIA_TOKEN_ADDRESSES.USDC,
-    underlyingAsset: BASE_SEPOLIA_TOKEN_ADDRESSES.USDC,
+    id: BASE_TOKEN_ADDRESSES.USDC,
+    underlyingAsset: BASE_TOKEN_ADDRESSES.USDC,
     symbol: 'USDC',
     name: 'USD Coin',
     decimals: 6,
@@ -57,8 +57,8 @@ const MOCK_RESERVE_DATA: ReserveData[] = [
     isUsingFallbackData: true
   },
   {
-    id: BASE_SEPOLIA_TOKEN_ADDRESSES.ETH,
-    underlyingAsset: BASE_SEPOLIA_TOKEN_ADDRESSES.ETH,
+    id: BASE_TOKEN_ADDRESSES.ETH,
+    underlyingAsset: BASE_TOKEN_ADDRESSES.ETH,
     symbol: 'WETH',
     name: 'Wrapped Ether',
     decimals: 18,
@@ -78,27 +78,27 @@ const MOCK_RESERVE_DATA: ReserveData[] = [
 async function fetchAaveReserveData(): Promise<ReserveData[]> {
   try {
     console.log('Fetching Aave V3 data using Aave SDK...')
-    console.log('RPC URL:', BASE_SEPOLIA_RPC_URL)
-    console.log('Chain ID:', BASE_SEPOLIA_CHAIN_ID)
+    console.log('RPC URL:', BASE_RPC_URL)
+    console.log('Chain ID:', BASE_CHAIN_ID)
     console.log('UI Pool Data Provider:', UI_POOL_DATA_PROVIDER_ADDRESS)
     
-    // Create provider for Base Sepolia network with timeout
-    const provider = new ethers.providers.JsonRpcProvider(BASE_SEPOLIA_RPC_URL, {
-      name: 'base-sepolia',
-      chainId: BASE_SEPOLIA_CHAIN_ID,
+    // Create provider for Base network with timeout
+    const provider = new ethers.providers.JsonRpcProvider(BASE_RPC_URL, {
+      name: 'base',
+      chainId: BASE_CHAIN_ID,
     })
     
     console.log('Provider created, testing connection...')
     
     // Test the connection first
     const blockNumber = await provider.getBlockNumber()
-    console.log('Connected to Base Sepolia network, block number:', blockNumber)
+    console.log('Connected to Base network, block number:', blockNumber)
     
     // Initialize UiPoolDataProvider
     const poolDataProviderContract = new UiPoolDataProvider({
       uiPoolDataProviderAddress: UI_POOL_DATA_PROVIDER_ADDRESS,
       provider,
-      chainId: BASE_SEPOLIA_CHAIN_ID,
+      chainId: BASE_CHAIN_ID,
     })
 
     console.log('UiPoolDataProvider initialized, calling getReservesHumanized...')

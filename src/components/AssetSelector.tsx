@@ -125,7 +125,7 @@ export function AssetSelector({ selectedToken, onTokenSelect }: AssetSelectorPro
       {isUsingFallbackData && (
         <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-950 rounded-lg border border-yellow-200 dark:border-yellow-800">
           <div className="text-sm text-yellow-800 dark:text-yellow-200">
-            ⚠️ Using demo data - Aave V3 Base subgraph unavailable
+            ⚠️ Using demo data - Aave V3 Base SDK unavailable
           </div>
         </div>
       )}
@@ -133,7 +133,7 @@ export function AssetSelector({ selectedToken, onTokenSelect }: AssetSelectorPro
       {isConnected && !isUsingFallbackData && (
         <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-950 rounded-lg border border-blue-200 dark:border-blue-800">
           <div className="text-sm text-blue-800 dark:text-blue-200">
-            📊 Real-time data from Aave V3 Base subgraph
+            📊 Real-time data from Aave V3 Base SDK
           </div>
         </div>
       )}
