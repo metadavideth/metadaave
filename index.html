@@ -10,13 +10,51 @@
     <!-- Preconnect to Farcaster Auth Server for better performance -->
     <link rel="preconnect" href="https://auth.farcaster.xyz" />
     <script>
-      // According to Farcaster docs, the SDK should be automatically injected
-      // We just need to wait for it and call ready() when available
+      // Debug environment and SDK availability
       (function() {
-        console.log('=== Farcaster Mini App Initialization ===');
+        console.log('=== Farcaster Environment Debug ===');
+        console.log('URL:', window.location.href);
+        console.log('Referrer:', document.referrer);
+        console.log('User Agent:', navigator.userAgent);
+        console.log('Is iframe:', window.self !== window.top);
+        console.log('Parent window:', window.parent !== window);
+        console.log('All window keys:', Object.keys(window).slice(0, 20));
+        
+        // Check for Farcaster-specific indicators
+        const farcasterIndicators = {
+          hasFarcasterSDK: !!(window.FarcasterMiniApp),
+          hasFarcasterInURL: window.location.href.includes('farcaster'),
+          hasFarcasterInReferrer: document.referrer.includes('farcaster'),
+          hasWarpcastInReferrer: document.referrer.includes('warpcast'),
+          isIframe: window.self !== window.top,
+          hasFarcasterInUserAgent: navigator.userAgent.includes('farcaster')
+        };
+        
+        console.log('Farcaster indicators:', farcasterIndicators);
+        
+        // Check if we're actually in a Mini App environment
+        const isMiniAppEnvironment = farcasterIndicators.hasFarcasterInURL || 
+                                   farcasterIndicators.hasFarcasterInReferrer ||
+                                   farcasterIndicators.hasWarpcastInReferrer ||
+                                   farcasterIndicators.isIframe;
+        
+        console.log('Is Mini App environment:', isMiniAppEnvironment);
+        
+        if (!isMiniAppEnvironment) {
+          console.log('⚠️ This does not appear to be a Farcaster Mini App environment');
+          console.log('The SDK will not be injected unless running in Farcaster/Warpcast');
+          return;
+        }
+        
+        console.log('✅ Appears to be in Farcaster environment, waiting for SDK...');
+        
+        let attempts = 0;
+        const maxAttempts = 50; // 5 seconds
         
         function waitForSDK() {
-          // Check if Farcaster SDK is available
+          attempts++;
+          console.log(`SDK check attempt ${attempts}/${maxAttempts}`);
+          
           if (window.FarcasterMiniApp && window.FarcasterMiniApp.actions) {
             console.log('✅ Farcaster SDK detected, calling ready()...');
             window.FarcasterMiniApp.actions.ready()
@@ -26,13 +64,17 @@
               .catch((error) => {
                 console.warn('❌ Farcaster SDK ready() failed:', error);
               });
+          } else if (attempts >= maxAttempts) {
+            console.log('❌ Farcaster SDK not found after', maxAttempts, 'attempts');
+            console.log('This might indicate:');
+            console.log('1. Not actually in a Farcaster Mini App environment');
+            console.log('2. SDK injection is delayed or failed');
+            console.log('3. App needs to be accessed through Farcaster/Warpcast');
           } else {
-            // SDK not ready yet, check again in 100ms
             setTimeout(waitForSDK, 100);
           }
         }
         
-        // Start waiting for SDK
         waitForSDK();
       })();
     </script>
