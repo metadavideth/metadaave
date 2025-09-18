@@ -70,58 +70,29 @@ export function getFarcasterSDK() {
   
   try {
     console.log("Checking for Farcaster SDK...")
-    console.log("Window object keys:", Object.keys(window).slice(0, 20)) // First 20 keys
+    console.log("Window object keys:", Object.keys(window).slice(0, 20))
     console.log("FarcasterMiniApp in window:", !!(window as any).FarcasterMiniApp)
-    console.log("FarcasterMiniApp type:", typeof (window as any).FarcasterMiniApp)
     
-    // First check current window
+    // Check for the SDK in the current window
     if ((window as any).FarcasterMiniApp) {
       console.log("Farcaster SDK found in current window")
       console.log("SDK structure:", Object.keys((window as any).FarcasterMiniApp))
       return (window as any).FarcasterMiniApp
     }
     
-    // Note: Cannot access parent/top windows due to CORS restrictions in Farcaster iframe
-    // The SDK must be loaded directly in this iframe
-    
-    console.log("Farcaster SDK not found in any window")
-    console.log("Available window properties with 'farcaster':", Object.keys(window).filter(key => key.toLowerCase().includes('farcaster')))
-    console.log("Available window properties with 'Farcaster':", Object.keys(window).filter(key => key.includes('Farcaster')))
-    
-    // Check if it might be under a different name
+    // Check for alternative SDK names that might be used
     const possibleNames = ['FarcasterMiniApp', 'farcasterMiniApp', 'Farcaster', 'farcaster', 'MiniApp', 'miniApp']
     for (const name of possibleNames) {
       if ((window as any)[name]) {
         console.log(`Found potential SDK under name: ${name}`, (window as any)[name])
-        // If we find it under a different name, use it
-        if (name !== 'FarcasterMiniApp') {
-          (window as any).FarcasterMiniApp = (window as any)[name]
-          return (window as any).FarcasterMiniApp
-        }
+        return (window as any)[name]
       }
     }
     
-    // Check if it might be nested deeper in the window object
-    const nestedPaths = [
-      'window.FarcasterMiniApp',
-      'window.farcaster.MiniApp',
-      'window.Farcaster.MiniApp',
-      'window.miniapp.Farcaster',
-      'window.farcaster.miniapp'
-    ]
+    console.log("Farcaster SDK not found in window")
+    console.log("Available window properties with 'farcaster':", Object.keys(window).filter(key => key.toLowerCase().includes('farcaster')))
+    console.log("Available window properties with 'Farcaster':", Object.keys(window).filter(key => key.includes('Farcaster')))
     
-    for (const path of nestedPaths) {
-      try {
-        const value = eval(path)
-        if (value) {
-          console.log(`Found SDK at nested path: ${path}`, value)
-          (window as any).FarcasterMiniApp = value
-          return (window as any).FarcasterMiniApp
-        }
-      } catch (e) {
-        // Path doesn't exist, continue
-      }
-    }
   } catch (error) {
     console.warn("Failed to get Farcaster SDK:", error)
   }
@@ -226,30 +197,66 @@ export async function getFarcasterUserData() {
     const sdk = getFarcasterSDK()
     
     if (sdk && isFarcasterEnvironment()) {
-      // We're in a Farcaster environment with SDK
+      console.log("Attempting Farcaster authentication...")
+      
       try {
+        // Try Quick Auth first (automatic authentication)
+        if (sdk.actions && sdk.actions.ready) {
+          await sdk.actions.ready()
+          console.log("Farcaster SDK ready")
+        }
+        
         // Check if user is already authenticated
-        const isAuthenticated = await sdk.actions.isAuthenticated()
-        if (isAuthenticated) {
-          // Get user data
-          const userData = await sdk.actions.getUserData()
-          if (userData) {
-            return {
-              username: userData.username || mockFarcasterUser.username,
-              address: userData.address || userData.verifiedAddresses?.[0] || mockFarcasterUser.address,
-              fid: userData.fid || mockFarcasterUser.fid,
-              displayName: userData.displayName || mockFarcasterUser.displayName
+        if (sdk.actions && sdk.actions.isAuthenticated) {
+          const isAuthenticated = await sdk.actions.isAuthenticated()
+          console.log("User authenticated:", isAuthenticated)
+          
+          if (isAuthenticated && sdk.actions.getUserData) {
+            // Get user data
+            const userData = await sdk.actions.getUserData()
+            console.log("User data received:", userData)
+            
+            if (userData) {
+              return {
+                username: userData.username || mockFarcasterUser.username,
+                address: userData.address || userData.verifiedAddresses?.[0] || mockFarcasterUser.address,
+                fid: userData.fid || mockFarcasterUser.fid,
+                displayName: userData.displayName || mockFarcasterUser.displayName
+              }
             }
           }
         }
+        
+        // If not authenticated, try to authenticate
+        if (sdk.actions && sdk.actions.authenticate) {
+          console.log("Attempting to authenticate user...")
+          const authResult = await sdk.actions.authenticate()
+          console.log("Authentication result:", authResult)
+          
+          if (authResult && authResult.success && sdk.actions.getUserData) {
+            const userData = await sdk.actions.getUserData()
+            console.log("User data after authentication:", userData)
+            
+            if (userData) {
+              return {
+                username: userData.username || mockFarcasterUser.username,
+                address: userData.address || userData.verifiedAddresses?.[0] || mockFarcasterUser.address,
+                fid: userData.fid || mockFarcasterUser.fid,
+                displayName: userData.displayName || mockFarcasterUser.displayName
+              }
+            }
+          }
+        }
+        
       } catch (sdkError) {
-        console.warn("SDK authentication check error:", sdkError)
+        console.warn("SDK authentication error:", sdkError)
         // Fallback to mock data if SDK fails
         return mockFarcasterUser
       }
     }
     
     // Development mode or previewer - use mock data
+    console.log("Using mock data for development/previewer")
     return mockFarcasterUser
   } catch (error) {
     console.warn("Error getting Farcaster user data:", error)
