@@ -36,12 +36,27 @@ export function getFarcasterSDK() {
   if (typeof window === "undefined") return null
   
   try {
+    console.log("Checking for Farcaster SDK...")
+    console.log("Window object keys:", Object.keys(window).slice(0, 20)) // First 20 keys
+    console.log("FarcasterMiniApp in window:", !!(window as any).FarcasterMiniApp)
+    console.log("FarcasterMiniApp type:", typeof (window as any).FarcasterMiniApp)
+    
     if ((window as any).FarcasterMiniApp) {
       console.log("Farcaster SDK found in window object")
+      console.log("SDK structure:", Object.keys((window as any).FarcasterMiniApp))
       return (window as any).FarcasterMiniApp
     } else {
       console.log("Farcaster SDK not found in window object")
-      console.log("Available window properties:", Object.keys(window).filter(key => key.toLowerCase().includes('farcaster')))
+      console.log("Available window properties with 'farcaster':", Object.keys(window).filter(key => key.toLowerCase().includes('farcaster')))
+      console.log("Available window properties with 'Farcaster':", Object.keys(window).filter(key => key.includes('Farcaster')))
+      
+      // Check if it might be under a different name
+      const possibleNames = ['FarcasterMiniApp', 'farcasterMiniApp', 'Farcaster', 'farcaster']
+      for (const name of possibleNames) {
+        if ((window as any)[name]) {
+          console.log(`Found potential SDK under name: ${name}`, (window as any)[name])
+        }
+      }
     }
   } catch (error) {
     console.warn("Failed to get Farcaster SDK:", error)
@@ -51,26 +66,35 @@ export function getFarcasterSDK() {
 }
 
 // Wait for Farcaster SDK to be available
-export async function waitForFarcasterSDK(timeout = 5000): Promise<any> {
+export async function waitForFarcasterSDK(timeout = 10000): Promise<any> {
   return new Promise((resolve, reject) => {
     const startTime = Date.now()
+    let attempts = 0
     
     const checkSDK = () => {
+      attempts++
+      console.log(`SDK check attempt ${attempts}...`)
+      
       const sdk = getFarcasterSDK()
       if (sdk) {
-        console.log("Farcaster SDK loaded successfully")
+        console.log("Farcaster SDK loaded successfully after", attempts, "attempts")
         resolve(sdk)
         return
       }
       
       if (Date.now() - startTime > timeout) {
-        console.warn("Farcaster SDK timeout - not loaded within", timeout, "ms")
+        console.warn("Farcaster SDK timeout - not loaded within", timeout, "ms after", attempts, "attempts")
+        console.log("Final window state:", {
+          hasFarcasterMiniApp: !!(window as any).FarcasterMiniApp,
+          windowKeys: Object.keys(window).slice(0, 10),
+          allWindowKeys: Object.keys(window).length
+        })
         reject(new Error("Farcaster SDK not available"))
         return
       }
       
-      // Check again in 100ms
-      setTimeout(checkSDK, 100)
+      // Check again in 200ms
+      setTimeout(checkSDK, 200)
     }
     
     checkSDK()
