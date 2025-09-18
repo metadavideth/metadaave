@@ -19,31 +19,41 @@
         console.log('Looking for MiniApp in window:', Object.keys(window).filter(k => k.toLowerCase().includes('miniapp')));
         console.log('Looking for SDK in window:', Object.keys(window).filter(k => k.toLowerCase().includes('sdk')));
         
+        let attempts = 0;
+        const maxAttempts = 50; // Stop after 5 seconds (50 * 100ms)
+        
         function tryReady() {
-          console.log('Attempting to find Farcaster SDK...');
-          console.log('window.FarcasterMiniApp:', !!window.FarcasterMiniApp);
-          console.log('window.farcaster:', !!window.farcaster);
-          console.log('window.Farcaster:', !!window.Farcaster);
-          console.log('window.MiniApp:', !!window.MiniApp);
-          console.log('window.sdk:', !!window.sdk);
+          attempts++;
+          console.log(`Attempt ${attempts}/${maxAttempts}: Attempting to find Farcaster SDK...`);
           
-          // Try multiple possible SDK locations
+          // Check all possible SDK locations
           const possibleSDKs = [
-            window.FarcasterMiniApp,
-            window.farcaster,
-            window.Farcaster,
-            window.MiniApp,
-            window.sdk,
-            window.FarcasterMiniApp?.sdk,
-            window.farcaster?.sdk,
-            window.Farcaster?.sdk
+            { name: 'window.FarcasterMiniApp', sdk: window.FarcasterMiniApp },
+            { name: 'window.farcaster', sdk: window.farcaster },
+            { name: 'window.Farcaster', sdk: window.Farcaster },
+            { name: 'window.MiniApp', sdk: window.MiniApp },
+            { name: 'window.sdk', sdk: window.sdk },
+            { name: 'window.FarcasterMiniApp?.sdk', sdk: window.FarcasterMiniApp?.sdk },
+            { name: 'window.farcaster?.sdk', sdk: window.farcaster?.sdk },
+            { name: 'window.Farcaster?.sdk', sdk: window.Farcaster?.sdk }
           ];
           
+          // Log all possibilities
+          possibleSDKs.forEach(({ name, sdk }) => {
+            console.log(`${name}:`, !!sdk);
+            if (sdk) {
+              console.log(`  Structure:`, Object.keys(sdk));
+              if (sdk.actions) console.log(`  Actions:`, Object.keys(sdk.actions));
+              if (sdk.quickAuth) console.log(`  QuickAuth:`, Object.keys(sdk.quickAuth));
+            }
+          });
+          
+          // Look for any object that has actions.ready
           let foundSDK = null;
-          for (const sdk of possibleSDKs) {
+          for (const { name, sdk } of possibleSDKs) {
             if (sdk && sdk.actions && sdk.actions.ready) {
               foundSDK = sdk;
-              console.log('Found SDK with ready() method:', sdk);
+              console.log(`✅ Found SDK with ready() method at ${name}:`, sdk);
               break;
             }
           }
@@ -59,17 +69,26 @@
               .catch((error) => {
                 console.warn('❌ Farcaster SDK ready() failed:', error);
               });
-          } else {
-            console.log('SDK not found yet, retrying in 100ms...');
-            setTimeout(tryReady, 100);
+            return; // Stop retrying
           }
+          
+          if (attempts >= maxAttempts) {
+            console.log('❌ Stopped trying to find Farcaster SDK after', maxAttempts, 'attempts');
+            console.log('Final window state:', {
+              allKeys: Object.keys(window).length,
+              farcasterKeys: Object.keys(window).filter(k => k.toLowerCase().includes('farcaster')),
+              miniappKeys: Object.keys(window).filter(k => k.toLowerCase().includes('miniapp')),
+              sdkKeys: Object.keys(window).filter(k => k.toLowerCase().includes('sdk'))
+            });
+            return;
+          }
+          
+          console.log(`SDK not found yet, retrying in 100ms... (${attempts}/${maxAttempts})`);
+          setTimeout(tryReady, 100);
         }
         
-        // Try immediately and then retry every 100ms for up to 10 seconds
+        // Start trying
         tryReady();
-        setTimeout(() => {
-          console.log('Stopped trying to call Farcaster SDK ready() after 10 seconds');
-        }, 10000);
       })();
     </script>
   </head>
