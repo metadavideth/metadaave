@@ -3,7 +3,7 @@ import { useAccount } from 'wagmi'
 import { parseUnits, formatUnits } from 'viem'
 import { createWalletClient, createPublicClient, http, getContract } from 'viem'
 import { base } from 'viem/chains'
-import { getAuthenticatedAddress, getFarcasterSDK, isFarcasterEnvironment } from '../utils/farcaster'
+import { getAuthenticatedAddress, getFarcasterSDK, isFarcasterEnvironment, mockFarcasterUser } from '../utils/farcaster'
 import type { Token } from '../types'
 
 // Aave V3 Pool ABI - minimal for core functions
@@ -108,6 +108,25 @@ export function calculateTransactionFee(amount: string): string {
   return (numAmount * TRANSACTION_FEE_RATE).toFixed(6)
 }
 
+// Check if we're in a real Farcaster environment with actual wallet
+async function isRealFarcasterEnvironment() {
+  try {
+    const sdk = getFarcasterSDK()
+    if (!sdk || !isFarcasterEnvironment()) return false
+    
+    // Check if we have a real authenticated user (not mock)
+    const isAuthenticated = await sdk.actions.isAuthenticated()
+    if (!isAuthenticated) return false
+    
+    const userData = await sdk.actions.getUserData()
+    // If we get mock data, we're in previewer/development
+    return userData && userData.address !== mockFarcasterUser.address
+  } catch (error) {
+    console.warn('Error checking real Farcaster environment:', error)
+    return false
+  }
+}
+
 // Get Farcaster wallet client with proper error handling
 async function getFarcasterWalletClient() {
   try {
@@ -118,7 +137,15 @@ async function getFarcasterWalletClient() {
       throw new Error('No authenticated address found')
     }
 
-    // Create wallet client with the authenticated address
+    // Check if we're in a real Farcaster environment
+    const isRealEnv = await isRealFarcasterEnvironment()
+    
+    if (!isRealEnv) {
+      // In previewer/development, return a mock client that simulates transactions
+      return createMockWalletClient(address as `0x${string}`)
+    }
+
+    // In real Farcaster environment, create actual wallet client
     return createWalletClient({
       chain: base,
       transport: http(),
@@ -128,6 +155,25 @@ async function getFarcasterWalletClient() {
     console.error('Failed to create Farcaster wallet client:', error)
     throw new Error(`Failed to initialize wallet: ${error instanceof Error ? error.message : 'Unknown error'}`)
   }
+}
+
+// Create a mock wallet client for development/previewer
+function createMockWalletClient(address: `0x${string}`) {
+  return {
+    chain: base,
+    account: address,
+    writeContract: async (params: any) => {
+      // Simulate transaction delay
+      await new Promise(resolve => setTimeout(resolve, 2000))
+      
+      // Return a mock transaction hash
+      return `0x${Math.random().toString(16).substr(2, 64)}` as `0x${string}`
+    },
+    readContract: async (params: any) => {
+      // For read operations, use the public client
+      return publicClient.readContract(params)
+    }
+  } as any
 }
 
 // Create public client for reading
@@ -141,6 +187,9 @@ async function executeAaveTransaction(params: TransactionParams): Promise<Transa
   const { token, amount, action } = params
   
   try {
+    // Check if we're in a real Farcaster environment
+    const isRealEnv = await isRealFarcasterEnvironment()
+    
     // Get Farcaster wallet client
     const walletClient = await getFarcasterWalletClient()
     const userAddress = await getAuthenticatedAddress()
@@ -152,6 +201,15 @@ async function executeAaveTransaction(params: TransactionParams): Promise<Transa
     const tokenAddress = token.address as `0x${string}`
     const amountWei = parseUnits(amount, token.decimals || 18)
     const fee = calculateTransactionFee(amount)
+
+    if (!isRealEnv) {
+      // In previewer/development, simulate the transaction
+      console.log(`[MOCK] Simulating ${action} transaction for ${amount} ${token.symbol}`)
+      console.log(`[MOCK] User: ${userAddress}`)
+      console.log(`[MOCK] Token: ${tokenAddress}`)
+      console.log(`[MOCK] Amount: ${amountWei.toString()}`)
+      console.log(`[MOCK] Fee: ${fee} ${token.symbol}`)
+    }
 
     // Create Aave V3 Pool contract
     const poolContract = getContract({
@@ -233,27 +291,37 @@ async function ensureTokenApproval(
   amount: bigint,
   userAddress: `0x${string}`
 ) {
-  const tokenContract = getContract({
-    address: tokenAddress,
-    abi: ERC20_ABI,
-    client: publicClient,
-  })
-
-  // Check current allowance
-  const currentAllowance = await tokenContract.read.allowance([userAddress, spenderAddress])
-  
-  if (currentAllowance < amount) {
-    // Need to approve
-    const walletClient = await getFarcasterWalletClient()
-    const tokenContractWrite = getContract({
+  try {
+    const tokenContract = getContract({
       address: tokenAddress,
       abi: ERC20_ABI,
-      client: walletClient,
+      client: publicClient,
     })
 
-    // Approve maximum amount for gas efficiency
-    const maxApproval = BigInt('0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff')
-    await tokenContractWrite.write.approve([spenderAddress, maxApproval])
+    // Check current allowance
+    const currentAllowance = await tokenContract.read.allowance([userAddress, spenderAddress])
+    
+    if (currentAllowance < amount) {
+      // Need to approve
+      const walletClient = await getFarcasterWalletClient()
+      const tokenContractWrite = getContract({
+        address: tokenAddress,
+        abi: ERC20_ABI,
+        client: walletClient,
+      })
+
+      // Approve maximum amount for gas efficiency
+      const maxApproval = BigInt('0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff')
+      await tokenContractWrite.write.approve([spenderAddress, maxApproval])
+    }
+  } catch (error) {
+    // In mock environment, approval might fail, but that's okay
+    const isRealEnv = await isRealFarcasterEnvironment()
+    if (!isRealEnv) {
+      console.log(`[MOCK] Token approval simulation for ${tokenAddress}`)
+      return // Skip approval in mock environment
+    }
+    throw error
   }
 }
 
