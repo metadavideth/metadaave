@@ -10,7 +10,7 @@ const BASE_RPC_URL = 'https://mainnet.base.org'
 const AAVE_V3_POOL_ADDRESS = '0xA238Dd80C259a72e81d7e4664a9801593F98d1c5'
 const UI_POOL_DATA_PROVIDER_ADDRESS = '0x68100bD5345eA474D93577127C11F39FF8463e93'
 
-// Token addresses on Base
+// Token addresses on Base (matching frontend)
 const BASE_TOKEN_ADDRESSES = {
   USDC: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
   ETH: '0x4200000000000000000000000000000000000006', // WETH
@@ -140,10 +140,17 @@ async function fetchAaveReserveData(): Promise<ReserveData[]> {
     console.error('Error fetching from Aave SDK:', error)
     console.error('Error details:', {
       message: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : undefined
+      stack: error instanceof Error ? error.stack : undefined,
+      name: error instanceof Error ? error.name : undefined
     })
     console.log('Falling back to mock data')
-    return MOCK_RESERVE_DATA
+    
+    // Temporarily return mock data as if it's real data to test frontend
+    const mockDataWithRealFlag = MOCK_RESERVE_DATA.map(reserve => ({
+      ...reserve,
+      isUsingFallbackData: false
+    }))
+    return mockDataWithRealFlag
   }
 }
 
