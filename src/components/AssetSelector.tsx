@@ -11,7 +11,7 @@ interface AssetSelectorProps {
 
 export function AssetSelector({ selectedToken, onTokenSelect }: AssetSelectorProps) {
   const [localSelectedToken, setLocalSelectedToken] = useState<Token | null>(selectedToken || null)
-  const { tokens, isLoading, error, isConnected } = useTokensWithBalances()
+  const { tokens, isLoading, error, isConnected, isUsingFallbackData } = useTokensWithBalances()
 
   // Update local selected token when prop changes
   useEffect(() => {
@@ -122,7 +122,15 @@ export function AssetSelector({ selectedToken, onTokenSelect }: AssetSelectorPro
     <div className="card">
       <h2 className="text-lg font-semibold mb-4 text-card-foreground">Select Asset</h2>
       
-      {isConnected && (
+      {isUsingFallbackData && (
+        <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-950 rounded-lg border border-yellow-200 dark:border-yellow-800">
+          <div className="text-sm text-yellow-800 dark:text-yellow-200">
+            ⚠️ Using demo data - Aave subgraph unavailable
+          </div>
+        </div>
+      )}
+      
+      {isConnected && !isUsingFallbackData && (
         <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-950 rounded-lg border border-blue-200 dark:border-blue-800">
           <div className="text-sm text-blue-800 dark:text-blue-200">
             📊 Real-time data from Aave V3 on Base

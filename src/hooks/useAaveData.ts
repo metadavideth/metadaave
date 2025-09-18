@@ -95,9 +95,9 @@ async function fetchAaveReserveData(): Promise<ReserveData[]> {
     }
   }
   
-  // If all subgraph endpoints fail, return mock data
-  console.warn('All Aave subgraph endpoints failed, using mock data')
-  return MOCK_RESERVE_DATA
+  // If all subgraph endpoints fail, throw an error to trigger error state
+  console.warn('All Aave subgraph endpoints failed')
+  throw new Error('Aave subgraph unavailable - using demo data')
 }
 
 // Hook to get Aave V3 data
@@ -108,6 +108,9 @@ export function useAaveData() {
     staleTime: 30000, // 30 seconds
     refetchInterval: 60000, // Refetch every minute
     retry: 3,
+    meta: {
+      isFallbackData: false // This will be set to true when using mock data
+    }
   })
 }
 
@@ -115,8 +118,11 @@ export function useAaveData() {
 export function useEnrichedTokens() {
   const { data: aaveData, isLoading, error } = useAaveData()
 
+  // Use fallback data when there's an error
+  const dataToUse = error ? MOCK_RESERVE_DATA : aaveData
+
   const enrichedTokens: Token[] = AAVE_V3_BASE_TOKENS.map(token => {
-    const reserveData = aaveData?.find(
+    const reserveData = dataToUse?.find(
       reserve => reserve.underlyingAsset.toLowerCase() === token.address.toLowerCase()
     )
 
@@ -140,6 +146,7 @@ export function useEnrichedTokens() {
   return {
     tokens: enrichedTokens,
     isLoading,
-    error
+    error,
+    isUsingFallbackData: !!error
   }
 }

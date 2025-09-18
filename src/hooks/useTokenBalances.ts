@@ -82,7 +82,7 @@ export function useTokenBalances() {
 
 // Hook to get enriched tokens with user balances
 export function useTokensWithBalances() {
-  const { tokens, isLoading: aaveLoading, error: aaveError } = useEnrichedTokens()
+  const { tokens, isLoading: aaveLoading, error: aaveError, isUsingFallbackData } = useEnrichedTokens()
   const { data: balances, isLoading: balanceLoading, error: balanceError } = useTokenBalances()
   const { address, isConnected } = useAccount()
 
@@ -106,7 +106,8 @@ export function useTokensWithBalances() {
     tokens: enrichedTokens,
     isLoading: aaveLoading || balanceLoading,
     error: aaveError || balanceError,
-    isConnected
+    isConnected,
+    isUsingFallbackData
   }
 }
 
