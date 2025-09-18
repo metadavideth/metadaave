@@ -40,8 +40,79 @@ export function AssetSelector({ selectedToken, onTokenSelect }: AssetSelectorPro
     return (
       <div className="card">
         <h2 className="text-lg font-semibold mb-4 text-card-foreground">Select Asset</h2>
-        <div className="flex items-center justify-center py-8">
-          <div className="text-sm text-destructive">Failed to load data. Using cached data.</div>
+        <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-950 rounded-lg border border-yellow-200 dark:border-yellow-800">
+          <div className="text-sm text-yellow-800 dark:text-yellow-200">
+            ⚠️ Using demo data - Aave subgraph unavailable
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          {tokens.map((token) => (
+            <button
+              key={token.symbol}
+              onClick={() => handleTokenClick(token)}
+              className={`token-button w-full text-left p-3 rounded-lg border transition-all ${
+                localSelectedToken?.symbol === token.symbol
+                  ? "border-primary bg-primary text-white"
+                  : "border-border hover:border-muted bg-card hover:bg-accent"
+              }`}
+            >
+              <div className="flex items-center space-x-2 mb-2">
+                <span className="text-lg">{token.icon}</span>
+                <div className="text-left flex-1 min-w-0">
+                  <div
+                    className={`font-medium text-sm ${
+                      localSelectedToken?.symbol === token.symbol ? "text-white" : "text-card-foreground"
+                    }`}
+                  >
+                    {token.symbol}
+                  </div>
+                  <div
+                    className={`text-xs truncate ${
+                      localSelectedToken?.symbol === token.symbol ? "text-white/80" : "text-muted-foreground"
+                    }`}
+                  >
+                    {token.name}
+                  </div>
+                </div>
+              </div>
+
+              {/* APY Data */}
+              <div className="grid grid-cols-2 gap-2 text-left">
+                <div>
+                  <div
+                    className={`text-xs ${
+                      localSelectedToken?.symbol === token.symbol ? "text-white/80" : "text-muted-foreground"
+                    }`}
+                  >
+                    Supply APY
+                  </div>
+                  <div
+                    className={`text-sm font-medium ${
+                      localSelectedToken?.symbol === token.symbol ? "text-white" : "text-green-500"
+                    }`}
+                  >
+                    {token.supplyAPY ? `${token.supplyAPY.toFixed(2)}%` : token.apy}
+                  </div>
+                </div>
+                <div>
+                  <div
+                    className={`text-xs ${
+                      localSelectedToken?.symbol === token.symbol ? "text-white/80" : "text-muted-foreground"
+                    }`}
+                  >
+                    Borrow APY
+                  </div>
+                  <div
+                    className={`text-sm font-medium ${
+                      localSelectedToken?.symbol === token.symbol ? "text-white" : "text-orange-500"
+                    }`}
+                  >
+                    {token.borrowAPY ? `${token.borrowAPY.toFixed(2)}%` : 'N/A'}
+                  </div>
+                </div>
+              </div>
+            </button>
+          ))}
         </div>
       </div>
     )
