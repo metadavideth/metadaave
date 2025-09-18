@@ -4,11 +4,14 @@ import { formatUnits } from 'viem'
 import { AAVE_V3_BASE_TOKENS } from '../data/tokens'
 import type { Token } from '../types'
 
+// Aave V3 Base subgraph - the official working one!
+const AAVE_V3_BASE_SUBGRAPH_URL = 'https://api.thegraph.com/subgraphs/id/GQFbb95cE6d8mV989mL5figjaGaKCQB3xqYrr1bRyXqF'
+
 // Try multiple Aave data sources
 const AAVE_DATA_SOURCES = [
   {
-    name: 'Aave V3 The Graph (Ethereum)',
-    url: 'https://api.thegraph.com/subgraphs/name/aave/protocol-v3',
+    name: 'Aave V3 Base Subgraph',
+    url: AAVE_V3_BASE_SUBGRAPH_URL,
     query: `
       query GetReserveData($reserveAddresses: [String!]!) {
         reserves(where: { underlyingAsset_in: $reserveAddresses, isActive: true }) {
@@ -29,8 +32,8 @@ const AAVE_DATA_SOURCES = [
     variables: () => ({ reserveAddresses: AAVE_V3_BASE_TOKENS.map(token => token.address.toLowerCase()) })
   },
   {
-    name: 'Aave V3 The Graph (Polygon)',
-    url: 'https://api.thegraph.com/subgraphs/name/aave/protocol-v3-polygon',
+    name: 'Aave V3 The Graph (Ethereum)',
+    url: 'https://api.thegraph.com/subgraphs/name/aave/protocol-v3',
     query: `
       query GetReserveData($reserveAddresses: [String!]!) {
         reserves(where: { underlyingAsset_in: $reserveAddresses, isActive: true }) {
