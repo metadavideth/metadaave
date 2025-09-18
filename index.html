@@ -13,29 +13,63 @@
       // Call sdk.actions.ready() immediately when the page loads
       // This prevents the splash screen from persisting
       (function() {
-        console.log('Checking for Farcaster SDK on page load...');
+        console.log('=== Farcaster SDK Detection Debug ===');
+        console.log('Window keys:', Object.keys(window).slice(0, 30));
+        console.log('Looking for Farcaster in window:', Object.keys(window).filter(k => k.toLowerCase().includes('farcaster')));
+        console.log('Looking for MiniApp in window:', Object.keys(window).filter(k => k.toLowerCase().includes('miniapp')));
+        console.log('Looking for SDK in window:', Object.keys(window).filter(k => k.toLowerCase().includes('sdk')));
         
         function tryReady() {
-          if (window.FarcasterMiniApp && window.FarcasterMiniApp.actions && window.FarcasterMiniApp.actions.ready) {
-            console.log('Found Farcaster SDK, calling ready()...');
-            window.FarcasterMiniApp.actions.ready()
+          console.log('Attempting to find Farcaster SDK...');
+          console.log('window.FarcasterMiniApp:', !!window.FarcasterMiniApp);
+          console.log('window.farcaster:', !!window.farcaster);
+          console.log('window.Farcaster:', !!window.Farcaster);
+          console.log('window.MiniApp:', !!window.MiniApp);
+          console.log('window.sdk:', !!window.sdk);
+          
+          // Try multiple possible SDK locations
+          const possibleSDKs = [
+            window.FarcasterMiniApp,
+            window.farcaster,
+            window.Farcaster,
+            window.MiniApp,
+            window.sdk,
+            window.FarcasterMiniApp?.sdk,
+            window.farcaster?.sdk,
+            window.Farcaster?.sdk
+          ];
+          
+          let foundSDK = null;
+          for (const sdk of possibleSDKs) {
+            if (sdk && sdk.actions && sdk.actions.ready) {
+              foundSDK = sdk;
+              console.log('Found SDK with ready() method:', sdk);
+              break;
+            }
+          }
+          
+          if (foundSDK) {
+            console.log('Calling sdk.actions.ready()...');
+            foundSDK.actions.ready()
               .then(() => {
-                console.log('Farcaster SDK ready() called successfully');
+                console.log('✅ Farcaster SDK ready() called successfully');
+                // Store the SDK globally for later use
+                window.FarcasterMiniApp = foundSDK;
               })
               .catch((error) => {
-                console.warn('Farcaster SDK ready() failed:', error);
+                console.warn('❌ Farcaster SDK ready() failed:', error);
               });
           } else {
-            console.log('Farcaster SDK not found yet, retrying...');
+            console.log('SDK not found yet, retrying in 100ms...');
             setTimeout(tryReady, 100);
           }
         }
         
-        // Try immediately and then retry every 100ms for up to 5 seconds
+        // Try immediately and then retry every 100ms for up to 10 seconds
         tryReady();
         setTimeout(() => {
-          console.log('Stopped trying to call Farcaster SDK ready()');
-        }, 5000);
+          console.log('Stopped trying to call Farcaster SDK ready() after 10 seconds');
+        }, 10000);
       })();
     </script>
   </head>
