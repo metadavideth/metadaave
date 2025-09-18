@@ -4,8 +4,54 @@ import { formatUnits } from 'viem'
 import { AAVE_V3_BASE_TOKENS } from '../data/tokens'
 import type { Token } from '../types'
 
-// Aave V3 official API endpoint
-const AAVE_V3_API_URL = 'https://api.v3.aave.com/graphql'
+// Try multiple Aave data sources
+const AAVE_DATA_SOURCES = [
+  {
+    name: 'Aave V3 Official API',
+    url: 'https://api.v3.aave.com/graphql',
+    query: `
+      query GetReserveData($chainId: Int!) {
+        reserves(chainId: $chainId) {
+          id
+          underlyingAsset
+          symbol
+          name
+          decimals
+          liquidityRate
+          variableBorrowRate
+          totalLiquidity
+          totalCurrentVariableDebt
+          priceInEth
+          priceInUsd
+          isActive
+        }
+      }
+    `,
+    variables: { chainId: 8453 }
+  },
+  {
+    name: 'Aave V3 The Graph (Ethereum)',
+    url: 'https://api.thegraph.com/subgraphs/name/aave/protocol-v3',
+    query: `
+      query GetReserveData($reserveAddresses: [String!]!) {
+        reserves(where: { underlyingAsset_in: $reserveAddresses, isActive: true }) {
+          id
+          underlyingAsset
+          symbol
+          name
+          decimals
+          liquidityRate
+          variableBorrowRate
+          totalLiquidity
+          totalCurrentVariableDebt
+          priceInEth
+          priceInUsd
+        }
+      }
+    `,
+    variables: () => ({ reserveAddresses: AAVE_V3_BASE_TOKENS.map(token => token.address.toLowerCase()) })
+  }
+]
 
 // GraphQL query to get reserve data for Base from Aave V3 API
 const GET_RESERVE_DATA = `
@@ -45,54 +91,81 @@ interface AaveReserveData {
   reserves: ReserveData[]
 }
 
-// Mock data for fallback when subgraph fails
-const MOCK_RESERVE_DATA: ReserveData[] = AAVE_V3_BASE_TOKENS.map(token => ({
-  id: token.address,
-  underlyingAsset: token.address,
-  symbol: token.symbol,
-  name: token.name,
-  decimals: 18,
-  liquidityRate: (Math.random() * 0.05 * 1e25).toString(), // Random APY between 0-5%
-  variableBorrowRate: (Math.random() * 0.08 * 1e25).toString(), // Random borrow rate between 0-8%
-  totalLiquidity: '1000000000000000000000000', // 1M tokens
-  totalCurrentVariableDebt: '500000000000000000000000', // 500K tokens
-  priceInEth: '1',
-  priceInUsd: '2000'
-}))
+// Realistic mock data based on typical Aave V3 rates
+const MOCK_RESERVE_DATA: ReserveData[] = AAVE_V3_BASE_TOKENS.map(token => {
+  // More realistic APY ranges based on typical Aave V3 rates
+  const baseSupplyAPY = token.symbol === 'USDC' ? 0.04 : token.symbol === 'ETH' ? 0.03 : 0.025
+  const baseBorrowAPY = token.symbol === 'USDC' ? 0.06 : token.symbol === 'ETH' ? 0.05 : 0.045
+  
+  const supplyAPY = baseSupplyAPY + (Math.random() - 0.5) * 0.01 // ±0.5% variation
+  const borrowAPY = baseBorrowAPY + (Math.random() - 0.5) * 0.01 // ±0.5% variation
+  
+  return {
+    id: token.address,
+    underlyingAsset: token.address,
+    symbol: token.symbol,
+    name: token.name,
+    decimals: 18,
+    liquidityRate: (supplyAPY * 1e25).toString(), // Convert to ray (27 decimals)
+    variableBorrowRate: (borrowAPY * 1e25).toString(), // Convert to ray (27 decimals)
+    totalLiquidity: '1000000000000000000000000', // 1M tokens
+    totalCurrentVariableDebt: '500000000000000000000000', // 500K tokens
+    priceInEth: '1',
+    priceInUsd: '2000'
+  }
+})
 
 // Fetch Aave V3 reserve data with fallback
 async function fetchAaveReserveData(): Promise<ReserveData[]> {
-  try {
-    console.log('Fetching Aave V3 data from official API...')
-    const response = await fetch(AAVE_V3_API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        query: GET_RESERVE_DATA,
-        variables: { chainId: 8453 } // Base chain ID
-      })
-    })
+  // Try each data source
+  for (const source of AAVE_DATA_SOURCES) {
+    try {
+      console.log(`Trying ${source.name}...`)
+      
+      const variables = typeof source.variables === 'function' 
+        ? source.variables() 
+        : source.variables
 
-    if (response.ok) {
-      const data: { data: AaveReserveData } = await response.json()
-      if (data.data?.reserves?.length > 0) {
-        console.log('Successfully fetched data from Aave V3 API')
-        // Filter to only include our tokens
-        const ourTokenAddresses = AAVE_V3_BASE_TOKENS.map(token => token.address.toLowerCase())
-        const filteredReserves = data.data.reserves.filter(reserve => 
-          ourTokenAddresses.includes(reserve.underlyingAsset.toLowerCase())
-        )
-        return filteredReserves
+      const response = await fetch(source.url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          query: source.query,
+          variables
+        })
+      })
+
+      if (response.ok) {
+        const data: { data: AaveReserveData } = await response.json()
+        if (data.data?.reserves?.length > 0) {
+          console.log(`Successfully fetched data from ${source.name}`)
+          
+          // For Base-specific data, filter to our tokens
+          if (source.name.includes('Official API')) {
+            const ourTokenAddresses = AAVE_V3_BASE_TOKENS.map(token => token.address.toLowerCase())
+            const filteredReserves = data.data.reserves.filter(reserve => 
+              ourTokenAddresses.includes(reserve.underlyingAsset.toLowerCase())
+            )
+            return filteredReserves
+          }
+          
+          // For Ethereum data, return as-is (we'll use it as reference)
+          return data.data.reserves
+        }
       }
+      
+      console.warn(`${source.name} returned no data`)
+    } catch (error) {
+      console.warn(`Failed to fetch from ${source.name}:`, error)
+      continue
     }
-    
-    throw new Error(`API response not ok: ${response.status}`)
-  } catch (error) {
-    console.warn('Failed to fetch from Aave V3 API:', error)
-    throw new Error('Aave V3 API unavailable - using demo data')
   }
+  
+  // If all sources fail, throw an error to trigger fallback
+  console.warn('All Aave data sources failed')
+  throw new Error('Aave data sources unavailable - using demo data')
 }
 
 // Hook to get Aave V3 data
