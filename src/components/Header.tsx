@@ -38,6 +38,10 @@ export function Header() {
           searchParams: window.location.search,
           windowKeys: Object.keys(window).slice(0, 10),
           scripts: Array.from(document.scripts).map(s => s.src),
+          parentWindowAccess: window.parent !== window,
+          topWindowAccess: window.top !== window,
+          parentHasSDK: window.parent ? !!(window.parent as any).FarcasterMiniApp : false,
+          topHasSDK: window.top ? !!(window.top as any).FarcasterMiniApp : false,
           timestamp: new Date().toISOString()
         }
         
@@ -305,6 +309,10 @@ export function Header() {
             <div><strong>Hostname:</strong> {debugInfo.hostname}</div>
             <div><strong>Is Iframe:</strong> {debugInfo.isIframe ? "✅ Yes" : "❌ No"}</div>
             <div><strong>Has SDK:</strong> {debugInfo.hasFarcasterSDK ? "✅ Yes" : "❌ No"}</div>
+            <div><strong>Parent Window Access:</strong> {debugInfo.parentWindowAccess ? "✅ Yes" : "❌ No"}</div>
+            <div><strong>Parent Has SDK:</strong> {debugInfo.parentHasSDK ? "✅ Yes" : "❌ No"}</div>
+            <div><strong>Top Window Access:</strong> {debugInfo.topWindowAccess ? "✅ Yes" : "❌ No"}</div>
+            <div><strong>Top Has SDK:</strong> {debugInfo.topHasSDK ? "✅ Yes" : "❌ No"}</div>
             <div><strong>Referrer:</strong> {debugInfo.referrer || "None"}</div>
             <div><strong>Search Params:</strong> {debugInfo.searchParams || "None"}</div>
             <div><strong>User Agent:</strong> {debugInfo.userAgent.substring(0, 50)}...</div>

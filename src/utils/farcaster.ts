@@ -74,21 +74,52 @@ export function getFarcasterSDK() {
     console.log("FarcasterMiniApp in window:", !!(window as any).FarcasterMiniApp)
     console.log("FarcasterMiniApp type:", typeof (window as any).FarcasterMiniApp)
     
+    // First check current window
     if ((window as any).FarcasterMiniApp) {
-      console.log("Farcaster SDK found in window object")
+      console.log("Farcaster SDK found in current window")
       console.log("SDK structure:", Object.keys((window as any).FarcasterMiniApp))
       return (window as any).FarcasterMiniApp
-    } else {
-      console.log("Farcaster SDK not found in window object")
-      console.log("Available window properties with 'farcaster':", Object.keys(window).filter(key => key.toLowerCase().includes('farcaster')))
-      console.log("Available window properties with 'Farcaster':", Object.keys(window).filter(key => key.includes('Farcaster')))
-      
-      // Check if it might be under a different name
-      const possibleNames = ['FarcasterMiniApp', 'farcasterMiniApp', 'Farcaster', 'farcaster']
-      for (const name of possibleNames) {
-        if ((window as any)[name]) {
-          console.log(`Found potential SDK under name: ${name}`, (window as any)[name])
+    }
+    
+    // Try parent window (common in iframe scenarios)
+    if (window.parent && window.parent !== window) {
+      console.log("Checking parent window for Farcaster SDK...")
+      try {
+        if ((window.parent as any).FarcasterMiniApp) {
+          console.log("Farcaster SDK found in parent window")
+          // Copy to current window for easier access
+          (window as any).FarcasterMiniApp = (window.parent as any).FarcasterMiniApp
+          return (window as any).FarcasterMiniApp
         }
+      } catch (parentError) {
+        console.log("Cannot access parent window:", parentError)
+      }
+    }
+    
+    // Try top window
+    if (window.top && window.top !== window) {
+      console.log("Checking top window for Farcaster SDK...")
+      try {
+        if ((window.top as any).FarcasterMiniApp) {
+          console.log("Farcaster SDK found in top window")
+          // Copy to current window for easier access
+          (window as any).FarcasterMiniApp = (window.top as any).FarcasterMiniApp
+          return (window as any).FarcasterMiniApp
+        }
+      } catch (topError) {
+        console.log("Cannot access top window:", topError)
+      }
+    }
+    
+    console.log("Farcaster SDK not found in any window")
+    console.log("Available window properties with 'farcaster':", Object.keys(window).filter(key => key.toLowerCase().includes('farcaster')))
+    console.log("Available window properties with 'Farcaster':", Object.keys(window).filter(key => key.includes('Farcaster')))
+    
+    // Check if it might be under a different name
+    const possibleNames = ['FarcasterMiniApp', 'farcasterMiniApp', 'Farcaster', 'farcaster']
+    for (const name of possibleNames) {
+      if ((window as any)[name]) {
+        console.log(`Found potential SDK under name: ${name}`, (window as any)[name])
       }
     }
   } catch (error) {
