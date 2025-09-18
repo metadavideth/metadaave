@@ -22,20 +22,20 @@ function initializeFarcasterSDK() {
     const sdk = (window as any).FarcasterMiniApp
     console.log("Farcaster SDK loaded:", sdk)
 
-    // Initialize the SDK
+    // Call ready() to hide the splash screen when interface is ready
     if (sdk.actions && sdk.actions.ready) {
       sdk.actions.ready()
         .then(() => {
-          console.log("Farcaster SDK initialized successfully")
+          console.log("✅ Farcaster SDK ready() called - splash screen should hide")
         })
         .catch((error: any) => {
-          console.warn("Farcaster SDK initialization failed:", error)
+          console.warn("❌ Farcaster SDK ready() failed:", error)
         })
     }
   } else {
-    // In preview mode or when SDK is not available, we'll handle it gracefully
-    console.log("Farcaster SDK not available - this is expected in preview mode")
-    // Don't retry indefinitely in preview mode
+    // In preview mode, SDK is not available so we can't call ready()
+    // This means the splash screen will persist - this is expected behavior
+    console.log("⚠️ Farcaster SDK not available - splash screen will persist in preview mode")
   }
 }
 

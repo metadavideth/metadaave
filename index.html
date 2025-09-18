@@ -59,7 +59,7 @@
             console.log('✅ Farcaster SDK detected, calling ready()...');
             window.FarcasterMiniApp.actions.ready()
               .then(() => {
-                console.log('✅ Farcaster SDK ready() called successfully');
+                console.log('✅ Farcaster SDK ready() called successfully - splash screen should hide');
               })
               .catch((error) => {
                 console.warn('❌ Farcaster SDK ready() failed:', error);
@@ -67,16 +67,15 @@
           } else if (attempts >= maxAttempts) {
             console.log('❌ Farcaster SDK not found after', maxAttempts, 'attempts');
             console.log('This is expected in the preview tool - it ignores the manifest');
+            console.log('The splash screen will persist because ready() was not called');
             console.log('To test with full SDK:');
             console.log('1. Use the Mini App Debug Tool (not preview tool)');
             console.log('2. Test in real Farcaster/Warpcast client');
             console.log('3. Share a link in Farcaster and click it');
             
-            // In preview mode, we'll simulate the ready() call
-            console.log('🔄 Simulating ready() call for preview mode...');
-            setTimeout(() => {
-              console.log('✅ Simulated ready() call completed (preview mode)');
-            }, 1000);
+            // In preview mode, we can't call ready() because SDK is not available
+            // The splash screen will remain visible - this is expected behavior
+            console.log('⚠️ Cannot call ready() in preview mode - splash screen will persist');
           } else {
             setTimeout(waitForSDK, 100);
           }
