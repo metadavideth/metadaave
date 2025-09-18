@@ -25,10 +25,30 @@ export function isFarcasterEnvironment() {
     return true
   }
   
-  // Always return true in production to attempt SDK usage
-  // The SDK will handle authentication properly
-  console.log("Attempting Farcaster environment detection for production")
-  return true
+  // Check if we're in an iframe (common for mini apps)
+  if (window.self !== window.top) {
+    console.log("Detected iframe context - likely Farcaster mini app")
+    return true
+  }
+  
+  // Check for Farcaster-specific user agent or referrer
+  if (navigator.userAgent.includes("farcaster") || 
+      document.referrer.includes("farcaster") ||
+      document.referrer.includes("warpcast")) {
+    console.log("Farcaster environment detected via user agent/referrer")
+    return true
+  }
+  
+  // For production, be more conservative - only try if we have clear indicators
+  console.log("Not in Farcaster environment - SDK may not be available")
+  console.log("Environment details:", {
+    hostname: window.location.hostname,
+    isIframe: window.self !== window.top,
+    userAgent: navigator.userAgent,
+    referrer: document.referrer,
+    hasFarcasterSDK: !!(window as any).FarcasterMiniApp
+  })
+  return false
 }
 
 // Get Farcaster SDK instance from global window object

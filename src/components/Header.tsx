@@ -84,10 +84,10 @@ export function Header() {
             }
           }
         } else {
-          // Not in Farcaster environment, don't auto-connect
+          // Not in Farcaster environment, show appropriate message
           console.log("Not in Farcaster environment, user will need to connect manually")
           if (mounted) {
-            setError("Not in Farcaster environment. Please try connecting manually.")
+            setError("Not in Farcaster environment. Please access this app via Farcaster/Warpcast to use real authentication, or use the connect button to test with mock data.")
           }
         }
       } catch (e: any) {
@@ -190,9 +190,12 @@ export function Header() {
           setError("Farcaster SDK not available. Please refresh and try again.")
         }
       } else {
-        // Not in Farcaster environment, don't auto-connect
-        console.log("Not in Farcaster environment for connection")
-        setError("Not in Farcaster environment. Please access via Farcaster/Warpcast.")
+        // Not in Farcaster environment, allow mock data for testing
+        console.log("Not in Farcaster environment for connection - using mock data for testing")
+        setUsername(mockFarcasterUser.username)
+        setAddress(mockFarcasterUser.address)
+        setIsConnected(true)
+        setError("Using mock data for testing. For real authentication, access via Farcaster/Warpcast.")
       }
     } catch (e: any) {
       console.error("Connection error:", e)
