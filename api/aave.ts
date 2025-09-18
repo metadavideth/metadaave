@@ -129,8 +129,8 @@ async function fetchAaveReserveData(): Promise<ReserveData[]> {
       priceInEth: reserve.priceInEth,
       priceInUsd: reserve.priceInUsd,
       isActive: reserve.isActive,
-      supplyAPY: parseFloat(reserve.liquidityRate) * 100,
-      borrowAPY: parseFloat(reserve.variableBorrowRate) * 100,
+      supplyAPY: (parseFloat(reserve.liquidityRate) / 1e25) * 100,
+      borrowAPY: (parseFloat(reserve.variableBorrowRate) / 1e25) * 100,
       isUsingFallbackData: false
     }))
 
