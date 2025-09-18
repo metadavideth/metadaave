@@ -8,8 +8,8 @@ const BASE_CHAIN_ID = 8453
 const BASE_RPC_URL = 'https://mainnet.base.org'
 
 // Aave V3 Pool addresses on Base (from Aave Address Book)
-const AAVE_V3_POOL_ADDRESS = '0x6Ae43d3271ff6888e7Fc43Fd7321a503ff738951'
-const UI_POOL_DATA_PROVIDER_ADDRESS = '0x174446A67401D7d7Dd94A6BA2C8b56d0e4b2a1e5'
+const AAVE_V3_POOL_ADDRESS = '0xA238Dd80C259a72e81d7e4664a9801593F98d1c5'
+const UI_POOL_DATA_PROVIDER_ADDRESS = '0x68100bD5345eA474D93577127C11F39FF8463e93'
 
 // Token addresses on Base (from Aave Address Book)
 const BASE_TOKEN_ADDRESSES = {
@@ -93,7 +93,7 @@ async function fetchAaveReserveData(): Promise<ReserveData[]> {
 
     // Get reserves data
     const reservesData = await poolDataProviderContract.getReservesHumanized({
-      lendingPoolAddressProvider: AAVE_V3_POOL_ADDRESS,
+      lendingPoolAddressProvider: '0xe20fCBdBfFC4Dd138cE8b2E6FBb6CB49777ad64D', // Pool Address Provider
     })
 
     console.log(`Successfully fetched ${reservesData.reservesData.length} reserves using Aave SDK`)
