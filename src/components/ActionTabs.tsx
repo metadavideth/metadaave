@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { AAVE_V3_BASE_TOKENS } from "../data/tokens"
+import { useAaveTransactions, calculateTransactionFee } from "../hooks/useAaveTransactions"
 import type { Token } from "../types"
 
 interface ActionTabsProps {
@@ -15,8 +16,10 @@ export function ActionTabs({ onTransactionSuccess, selectedToken }: ActionTabsPr
   const [activeTab, setActiveTab] = useState<TabType>("supply")
   const [currentToken, setCurrentToken] = useState<Token>(selectedToken || AAVE_V3_BASE_TOKENS[0])
   const [amount, setAmount] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
   const [fee, setFee] = useState("0.00")
+  const [error, setError] = useState<string | null>(null)
+
+  const { supply, borrow, repay, withdraw } = useAaveTransactions()
 
   useEffect(() => {
     if (selectedToken) {
@@ -31,22 +34,55 @@ export function ActionTabs({ onTransactionSuccess, selectedToken }: ActionTabsPr
     { id: "withdraw", label: "Withdraw", color: "text-purple-400" },
   ]
 
-  const calculateFee = (amount: string) => {
-    const numAmount = Number.parseFloat(amount) || 0
-    return (numAmount * 0.001).toFixed(4)
-  }
-
   const handleTransaction = async () => {
     if (!amount || Number.parseFloat(amount) <= 0) return
 
-    setIsLoading(true)
+    setError(null)
 
-    await new Promise((resolve) => setTimeout(resolve, 2000))
+    try {
+      const transactionParams = {
+        token: currentToken,
+        amount: amount,
+      }
 
-    onTransactionSuccess(activeTab, amount, currentToken.symbol)
-    setAmount("")
-    setIsLoading(false)
+      let result
+      switch (activeTab) {
+        case 'supply':
+          result = await supply.mutateAsync(transactionParams)
+          break
+        case 'borrow':
+          result = await borrow.mutateAsync(transactionParams)
+          break
+        case 'repay':
+          result = await repay.mutateAsync(transactionParams)
+          break
+        case 'withdraw':
+          result = await withdraw.mutateAsync(transactionParams)
+          break
+        default:
+          throw new Error('Invalid action')
+      }
+
+      onTransactionSuccess(activeTab, amount, currentToken.symbol)
+      setAmount("")
+      setFee("0.00")
+    } catch (err) {
+      console.error('Transaction failed:', err)
+      setError(err instanceof Error ? err.message : 'Transaction failed')
+    }
   }
+
+  const getCurrentMutation = () => {
+    switch (activeTab) {
+      case 'supply': return supply
+      case 'borrow': return borrow
+      case 'repay': return repay
+      case 'withdraw': return withdraw
+      default: return supply
+    }
+  }
+
+  const isLoading = getCurrentMutation().isPending
 
   const getButtonText = () => {
     if (isLoading) return "Processing..."
@@ -77,8 +113,9 @@ export function ActionTabs({ onTransactionSuccess, selectedToken }: ActionTabsPr
 
   const handleAmountChange = (newAmount: string) => {
     setAmount(newAmount)
+    setError(null) // Clear error when amount changes
     if (newAmount && Number.parseFloat(newAmount) > 0) {
-      setFee(calculateFee(newAmount))
+      setFee(calculateTransactionFee(newAmount))
     } else {
       setFee("0.00")
     }
@@ -133,6 +170,14 @@ export function ActionTabs({ onTransactionSuccess, selectedToken }: ActionTabsPr
         </div>
       </div>
 
+      {/* Error Display */}
+      {error && (
+        <div className="mb-4 p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+          <div className="text-sm text-destructive font-medium">Transaction Failed</div>
+          <div className="text-xs text-destructive/80 mt-1">{error}</div>
+        </div>
+      )}
+
       {/* Action Button */}
       <button
         onClick={handleTransaction}
@@ -161,18 +206,20 @@ export function ActionTabs({ onTransactionSuccess, selectedToken }: ActionTabsPr
               <span className="text-muted-foreground">Network:</span>
               <span className="text-card-foreground">Base</span>
             </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Protocol:</span>
+              <span className="text-card-foreground">Aave V3</span>
+            </div>
             <div className="border-t border-border pt-2 mt-2">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Transaction Fee (0.1%):</span>
+                <span className="text-muted-foreground">Platform Fee (0.1%):</span>
                 <span className="text-card-foreground">
                   {fee} {currentToken.symbol}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Estimated Fee:</span>
-                <span className="text-card-foreground">
-                  {fee} {currentToken.symbol}
-                </span>
+                <span className="text-muted-foreground">Gas Fee:</span>
+                <span className="text-card-foreground">~$0.50</span>
               </div>
             </div>
           </div>
