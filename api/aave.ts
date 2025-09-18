@@ -1,7 +1,14 @@
 import { VercelRequest, VercelResponse } from '@vercel/node'
+import { UiPoolDataProvider } from '@aave/contract-helpers'
+import { ethers } from 'ethers'
 
 // Base network configuration
 const BASE_CHAIN_ID = 8453
+const BASE_RPC_URL = 'https://mainnet.base.org'
+
+// Aave V3 Pool addresses on Base (from Aave Address Book)
+const AAVE_V3_POOL_ADDRESS = '0xA238Dd80C259a72e81d7e4664a9801593F98d1c5'
+const UI_POOL_DATA_PROVIDER_ADDRESS = '0x68100bD5345eA474D93577127C11F39FF8463e93'
 
 // Token addresses on Base (from Aave Address Book)
 const BASE_TOKEN_ADDRESSES = {
@@ -30,7 +37,7 @@ interface ReserveData {
   isUsingFallbackData: boolean
 }
 
-// Realistic mock data based on typical Aave V3 rates
+// Fallback mock data
 const MOCK_RESERVE_DATA: ReserveData[] = [
   {
     id: BASE_TOKEN_ADDRESSES.USDC,
@@ -69,9 +76,51 @@ const MOCK_RESERVE_DATA: ReserveData[] = [
 ]
 
 async function fetchAaveReserveData(): Promise<ReserveData[]> {
-  // For now, return mock data with clear indication
-  console.log('Using realistic mock data - Aave V3 Base contracts temporarily unavailable')
-  return MOCK_RESERVE_DATA
+  try {
+    console.log('Fetching Aave V3 data using Aave SDK...')
+    
+    // Create provider for Base network
+    const provider = new ethers.providers.JsonRpcProvider(BASE_RPC_URL)
+    
+    // Initialize UiPoolDataProvider
+    const poolDataProviderContract = new UiPoolDataProvider({
+      uiPoolDataProviderAddress: UI_POOL_DATA_PROVIDER_ADDRESS,
+      provider,
+      chainId: BASE_CHAIN_ID,
+    })
+
+    // Get reserves data
+    const reservesData = await poolDataProviderContract.getReservesHumanized({
+      lendingPoolAddressProvider: '0xe20fCBdBfFC4Dd138cE8b2E6FBb6CB49777ad64D', // Pool Address Provider
+    })
+
+    console.log(`Successfully fetched ${reservesData.reservesData.length} reserves using Aave SDK`)
+
+    // Convert to our format
+    const reserves: ReserveData[] = reservesData.reservesData.map((reserve: any) => ({
+      id: reserve.underlyingAsset,
+      underlyingAsset: reserve.underlyingAsset,
+      symbol: reserve.symbol,
+      name: reserve.name,
+      decimals: reserve.decimals,
+      liquidityRate: reserve.liquidityRate,
+      variableBorrowRate: reserve.variableBorrowRate,
+      totalLiquidity: reserve.totalLiquidity,
+      totalCurrentVariableDebt: reserve.totalCurrentVariableDebt,
+      priceInEth: reserve.priceInEth,
+      priceInUsd: reserve.priceInUsd,
+      isActive: reserve.isActive,
+      supplyAPY: parseFloat(reserve.liquidityRate) * 100,
+      borrowAPY: parseFloat(reserve.variableBorrowRate) * 100,
+      isUsingFallbackData: false
+    }))
+
+    return reserves
+  } catch (error) {
+    console.error('Error fetching from Aave SDK:', error)
+    console.log('Falling back to mock data')
+    return MOCK_RESERVE_DATA
+  }
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -101,7 +150,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     console.error('API error:', error)
     res.status(500).json({ 
       error: 'Failed to fetch Aave data',
-      message: error instanceof Error ? error.message : 'Unknown error'
+      message: error instanceof Error ? error.message : 'Unknown error',
+      data: MOCK_RESERVE_DATA, // Always return mock data on error
+      isUsingFallbackData: true,
+      timestamp: new Date().toISOString()
     })
   }
 }
