@@ -72,19 +72,24 @@ async function fetchAllTokenBalances(farcasterWalletAddress: `0x${string}`, chai
       try {
         const balance = await fetchTokenBalance(token.address, farcasterWalletAddress, token.decimals || 18)
         return { address: token.address, balance }
-      } catch (error) {
-        // Skip tokens that fail (e.g., ContractFunctionZeroDataError)
-        console.log(`Skipping token ${token.symbol} due to error:`, error)
-        return { address: token.address, balance: '0' }
+      } catch (err: any) {
+        if (String(err?.name || '').includes('ContractFunctionZeroDataError')) {
+          // Skip token silently
+          return null;
+        }
+        // Surface real errors
+        throw err;
       }
     })
 
     const results = await Promise.all(balancePromises)
     
-    return results.reduce((acc, { address, balance }) => {
-      acc[address.toLowerCase()] = balance
-      return acc
-    }, {} as Record<string, string>)
+    return results
+      .filter((result): result is { address: string; balance: string } => result !== null)
+      .reduce((acc, { address, balance }) => {
+        acc[address.toLowerCase()] = balance
+        return acc
+      }, {} as Record<string, string>)
   } catch (error) {
     console.error('Error fetching token balances:', error)
     return {}
@@ -94,8 +99,8 @@ async function fetchAllTokenBalances(farcasterWalletAddress: `0x${string}`, chai
 // Hook to get user token balances using Farcaster wallet
 export function useTokenBalances(farcasterWalletAddress?: `0x${string}`, chainId?: string) {
   // Early-out when not connected
-  if (!farcasterWalletAddress) {
-    return { data: [], isLoading: false, error: null }
+  if (!farcasterWalletAddress || !chainId) {
+    return { data: [], isLoading: false, error: null, status: 'idle' } as const
   }
 
   return useQuery({
@@ -103,7 +108,8 @@ export function useTokenBalances(farcasterWalletAddress?: `0x${string}`, chainId
     queryFn: () => fetchAllTokenBalances(farcasterWalletAddress, chainId),
     staleTime: 10000, // 10 seconds
     refetchInterval: 30000, // Refetch every 30 seconds
-    retry: 2,
+    retry: false, // Prevent retry loops
+    refetchOnWindowFocus: false, // Prevent refetch on focus
   })
 }
 

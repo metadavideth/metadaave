@@ -58,7 +58,8 @@ export function useAaveData() {
     queryFn: fetchAaveReserveData,
     staleTime: 30000, // 30 seconds
     refetchInterval: 60000, // Refetch every minute
-    retry: 3,
+    retry: false, // Prevent retry loops
+    refetchOnWindowFocus: false, // Prevent refetch on focus
   })
 }
 

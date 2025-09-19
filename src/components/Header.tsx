@@ -4,8 +4,7 @@ import { useEffect, useState } from "react"
 import { initMiniAppAuth, isFarcasterEnvironment, mockFarcasterUser } from "../utils/farcaster"
 import { makeSiweNonce } from "../utils/auth"
 import { sdk as farcasterSDK } from "@farcaster/miniapp-sdk"
-import { getFarcasterProvider } from "../lib/farcasterProvider"
-import { recoverMessageAddress } from "viem"
+import { verifyFarcasterWallet } from "../lib/verifyWallet"
 import { useWallet } from "../contexts/WalletContext"
 
 function shortenAddress(address?: string) {
@@ -149,48 +148,21 @@ export function Header() {
         return
       }
 
-      // Get the Farcaster Wallet provider
-      const provider = await getFarcasterProvider();
-      if (!provider) {
-        throw new Error('Farcaster Wallet provider not found');
+      // Verify Farcaster Wallet with timeout and single attempt
+      let verified;
+      try {
+        verified = await verifyFarcasterWallet(); // <- NO Warpcast REST calls here
+        console.log('[wallet] verified Farcaster Wallet:', verified.address, 'chainId:', verified.chainId);
+        setFarcasterWalletAddress(verified.address);
+        setChainId(verified.chainId);
+      } catch (e) {
+        console.error('[wallet] verification failed:', e);
+        setError(e instanceof Error ? e.message : 'Wallet verification failed');
+        return;
       }
 
-      // Get accounts from provider
-      let accounts: string[] = await provider.request({ method: 'eth_accounts' });
-      if (!accounts?.length) {
-        accounts = await provider.request({ method: 'eth_requestAccounts' });
-      }
-      const providerAddress = accounts?.[0]?.toLowerCase();
-      console.log('[wallet] provider address:', providerAddress);
-
-      if (!providerAddress) {
-        throw new Error('No wallet address found');
-      }
-
-      // Get chain ID
-      const chainId = await provider.request({ method: 'eth_chainId' });
-      setChainId(chainId);
-      console.log('[wallet] chain ID:', chainId);
-
-      // Cryptographic verification
-      const verifyMsg = 'miniapp:verify';
-      const sig = await provider.request({
-        method: 'personal_sign',
-        params: [verifyMsg, providerAddress],
-      });
-      const recovered = (await recoverMessageAddress({ message: verifyMsg, signature: sig })).toLowerCase();
-
-      if (recovered !== providerAddress) {
-        throw new Error('Wallet mismatch: recovered address does not match provider address (not Farcaster Wallet).');
-      }
-      if (siweSignerAddress && siweSignerAddress !== providerAddress) {
-        throw new Error(`Wallet mismatch: SIWE signer ${siweSignerAddress} != provider ${providerAddress}.`);
-      }
-
-      console.log('[wallet] verified Farcaster Wallet:', providerAddress);
-      setFarcasterWalletAddress(providerAddress);
       setUsername("Farcaster User")
-      setAddress(providerAddress)
+      setAddress(verified.address)
       setIsConnected(true)
     } catch (e: any) {
       console.error("Connection error:", e)
