@@ -26,6 +26,13 @@ export function Header() {
   
   // Check if SDK has ETH bridge
   const hasBridge = sdkHasEthBridge(farcasterSDK)
+  
+  // Debug logging for bridge detection
+  console.log('[bridge] SDK actions:', Object.keys(farcasterSDK?.actions || {}))
+  console.log('[bridge] has ethProviderRequestV2:', typeof farcasterSDK?.actions?.ethProviderRequestV2)
+  console.log('[bridge] has ethProviderRequest:', typeof farcasterSDK?.actions?.ethProviderRequest)
+  console.log('[bridge] has openUrl:', typeof farcasterSDK?.actions?.openUrl)
+  console.log('[bridge] hasBridge result:', hasBridge)
 
   useEffect(() => {
     let mounted = true
@@ -189,7 +196,34 @@ export function Header() {
           title="Wallet actions not available on web"
           body="To verify or sign with your wallet, open this Mini App in the Farcaster mobile app (or Wallet app) where the Ethereum provider bridge is available."
           ctaLabel="Open in Farcaster"
-          onCta={() => farcasterSDK.actions.openUrl?.("farcaster://open-mini-app")}
+          onCta={() => {
+            // Try multiple deep link approaches
+            const currentUrl = window.location.href;
+            const farcasterUrl = `https://warpcast.com/~/add-cast-action?url=${encodeURIComponent(currentUrl)}`;
+            
+            // Try SDK method first
+            if (farcasterSDK?.actions?.openUrl) {
+              try {
+                farcasterSDK.actions.openUrl(farcasterUrl);
+                return;
+              } catch (e) {
+                console.warn('SDK openUrl failed:', e);
+              }
+            }
+            
+            // Fallback to window.open
+            try {
+              window.open(farcasterUrl, '_blank');
+            } catch (e) {
+              console.warn('window.open failed:', e);
+              // Final fallback - copy URL to clipboard
+              navigator.clipboard.writeText(currentUrl).then(() => {
+                alert('URL copied to clipboard! Please open it in the Farcaster mobile app.');
+              }).catch(() => {
+                alert('Please manually open this URL in the Farcaster mobile app: ' + currentUrl);
+              });
+            }
+          }}
         />
       </header>
     )
