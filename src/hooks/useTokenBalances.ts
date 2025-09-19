@@ -78,15 +78,18 @@ async function fetchAllTokenBalances(farcasterWalletAddress: `0x${string}`, chai
 
           const balancePromises = AAVE_V3_BASE_TOKENS.map(async (token) => {
             try {
+              console.log(`[balance] Attempting to fetch ${token.symbol} from ${token.address}`)
               const balance = await fetchTokenBalance(token.address, farcasterWalletAddress, token.decimals || 18)
+              console.log(`[balance] ✅ ${token.symbol}: ${balance}`)
               return { address: token.address, balance }
             } catch (err: any) {
               if (String(err?.name || '').includes('ContractFunctionZeroDataError')) {
                 // Skip token silently - contract doesn't exist
-                console.warn(`[balance] Skipping token ${token.symbol} (${token.address}) - contract not found`)
+                console.warn(`[balance] ❌ Skipping token ${token.symbol} (${token.address}) - contract not found`)
                 return null;
               }
               // Surface real errors
+              console.error(`[balance] ❌ Error fetching ${token.symbol}:`, err)
               throw err;
             }
           })
