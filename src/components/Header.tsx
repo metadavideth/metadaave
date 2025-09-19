@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { getFarcasterSDK, waitForFarcasterSDK, isFarcasterEnvironment, mockFarcasterUser } from "../utils/farcaster"
+import { initMiniAppAuth, isFarcasterEnvironment, mockFarcasterUser } from "../utils/farcaster"
 
 function shortenAddress(address?: string) {
   if (!address) return ""
@@ -48,55 +48,20 @@ export function Header() {
         console.log("Farcaster environment check:", debugData)
         
         if (isFarcasterEnv) {
-          // Try to get Farcaster SDK, waiting for it to load if needed
-          let sdk
-          try {
-            sdk = await waitForFarcasterSDK(3000) // Wait up to 3 seconds
-            console.log("Farcaster SDK loaded:", !!sdk)
-          } catch (error) {
-            console.warn("Failed to load Farcaster SDK:", error)
-            sdk = null
-          }
+          // Attempt Farcaster authentication
+          const { token, user } = await initMiniAppAuth()
           
-          if (sdk) {
-            // We're in a Farcaster environment with SDK
-            try {
-              console.log("Attempting Farcaster authentication...")
-              // Check if user is already authenticated
-              const isAuthenticated = await sdk.actions.isAuthenticated()
-              console.log("Farcaster authentication status:", isAuthenticated)
-              
-              if (isAuthenticated) {
-                // Get user data
-                const userData = await sdk.actions.getUserData()
-                console.log("Farcaster user data:", userData)
-                
-                if (mounted && userData) {
-                  setUsername(userData.username || "")
-                  setAddress(userData.address || userData.verifiedAddresses?.[0] || "")
-                  setIsConnected(true)
-                }
-              } else {
-                console.log("User not authenticated, will need to connect")
-              }
-            } catch (sdkError) {
-              console.error("SDK authentication check error:", sdkError)
-              console.error("Error details:", {
-                message: sdkError instanceof Error ? sdkError.message : 'Unknown error',
-                stack: sdkError instanceof Error ? sdkError.stack : undefined,
-                name: sdkError instanceof Error ? sdkError.name : undefined
-              })
-              // Don't fallback to mock data automatically - let user try to connect
-              if (mounted) {
-                console.log("SDK error occurred, user will need to manually connect")
-                setError(`Farcaster SDK error: ${sdkError instanceof Error ? sdkError.message : 'Unknown error'}`)
-              }
+          if (token && user) {
+            console.log("Farcaster authentication successful")
+            if (mounted) {
+              setUsername("Farcaster User")
+              setAddress("0x" + user.signature.slice(0, 40)) // Use signature as address placeholder
+              setIsConnected(true)
             }
           } else {
-            // SDK not available, don't auto-connect
-            console.log("Farcaster SDK not available, user will need to connect manually")
+            console.log("Farcaster authentication failed")
             if (mounted) {
-              setError("Farcaster SDK not available. Please try connecting manually.")
+              setError("Please connect your Farcaster wallet")
             }
           }
         } else {
@@ -133,77 +98,15 @@ export function Header() {
       })
       
       if (isFarcasterEnv) {
-        // Try to get Farcaster SDK, waiting for it to load if needed
-        let sdk
-        try {
-          sdk = await waitForFarcasterSDK(3000) // Wait up to 3 seconds
-          console.log("Farcaster SDK loaded for connect:", !!sdk)
-        } catch (error) {
-          console.warn("Failed to load Farcaster SDK for connect:", error)
-          sdk = null
-        }
+        // Attempt Farcaster authentication
+        const { token, user } = await initMiniAppAuth()
         
-        if (sdk) {
-          // We're in a Farcaster environment with SDK
-          try {
-            console.log("Attempting Farcaster authentication...")
-            console.log("SDK actions available:", Object.keys(sdk.actions || {}))
-            
-            // Try different authentication approaches
-            let authResult
-            try {
-              // First try the authenticate method
-              authResult = await sdk.actions.authenticate()
-              console.log("Farcaster authenticate() result:", authResult)
-            } catch (authError) {
-              console.warn("authenticate() failed, trying alternative approach:", authError)
-              // Try alternative authentication method
-              if (sdk.actions.openSigner) {
-                authResult = await sdk.actions.openSigner()
-                console.log("Farcaster openSigner() result:", authResult)
-              } else {
-                throw authError
-              }
-            }
-            
-            // Check if authentication was successful
-            const isAuthSuccess = authResult && (
-              authResult.success === true || 
-              authResult === true ||
-              (typeof authResult === 'object' && authResult.success !== false)
-            )
-            
-            console.log("Authentication success check:", isAuthSuccess)
-            
-            if (isAuthSuccess) {
-              // Get user data after successful authentication
-              const userData = await sdk.actions.getUserData()
-              console.log("Farcaster user data after auth:", userData)
-              
-              if (userData) {
-                setUsername(userData.username || "")
-                setAddress(userData.address || userData.verifiedAddresses?.[0] || "")
-                setIsConnected(true)
-              } else {
-                throw new Error("No user data received after authentication")
-              }
-            } else {
-              throw new Error(`Authentication failed - result: ${JSON.stringify(authResult)}`)
-            }
-          } catch (sdkError) {
-            console.error("SDK auth error:", sdkError)
-            console.error("Auth error details:", {
-              message: sdkError instanceof Error ? sdkError.message : 'Unknown error',
-              stack: sdkError instanceof Error ? sdkError.stack : undefined,
-              name: sdkError instanceof Error ? sdkError.name : undefined
-            })
-            setError(`Farcaster authentication failed: ${sdkError instanceof Error ? sdkError.message : 'Unknown error'}`)
-            // Don't automatically fallback to mock data - let user retry
-          }
+        if (token && user) {
+          setUsername("Farcaster User")
+          setAddress("0x" + user.signature.slice(0, 40)) // Use signature as address placeholder
+          setIsConnected(true)
         } else {
-          // SDK not available, don't auto-connect
-          console.log("Farcaster SDK not available for connection")
-          setError("Farcaster SDK not available. Please refresh and try again.")
+          setError("Please connect your Farcaster wallet")
         }
       } else {
         // Not in Farcaster environment, allow mock data for testing

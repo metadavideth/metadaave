@@ -9,6 +9,51 @@ export const mockFarcasterUser = {
 // Import Farcaster SDK as per official documentation
 import { sdk as farcasterSDK } from "@farcaster/miniapp-sdk"
 
+// Initialize Mini App authentication using the correct SDK API
+export async function initMiniAppAuth(): Promise<{ token?: string; user?: any }> {
+  try {
+    // Ensure SDK is ready
+    await farcasterSDK.actions.ready()
+    console.log("✅ Farcaster SDK ready")
+    
+    // Generate a random nonce
+    const nonce = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 15)
+    
+    // Log available actions for debugging
+    console.log("Available SDK actions:", Object.keys(farcasterSDK.actions))
+    
+    // Call signIn with nonce
+    const res = await farcasterSDK.actions.signIn({ nonce })
+    console.log("SignIn result:", { signature: res.signature, message: res.message, authMethod: res.authMethod })
+    
+    // Get Quick Auth token
+    const { token } = await farcasterSDK.quickAuth.getToken().catch(() => ({ token: undefined }))
+    
+    return { 
+      token, 
+      user: { 
+        signature: res.signature, 
+        message: res.message, 
+        authMethod: res.authMethod 
+      } 
+    }
+  } catch (error) {
+    console.warn("Mini App auth failed:", error)
+    return { token: undefined, user: undefined }
+  }
+}
+
+// Get auth token ensuring SDK is ready
+export async function getAuthToken(): Promise<string | undefined> {
+  try {
+    await farcasterSDK.actions.ready()
+    return farcasterSDK.quickAuth.token
+  } catch (error) {
+    console.warn("Failed to get auth token:", error)
+    return undefined
+  }
+}
+
 // Check if we're in a Farcaster Mini App environment
 export function isFarcasterEnvironment() {
   if (typeof window === "undefined") return false
@@ -176,68 +221,23 @@ export async function waitForFarcasterSDK(timeout = 10000): Promise<any> {
 export async function getFarcasterUserData() {
   try {
     if (isFarcasterEnvironment()) {
-      console.log("Attempting Farcaster Quick Auth...")
+      console.log("Attempting Farcaster authentication...")
       
-      try {
-        // Check if SDK is available
-        if (!farcasterSDK) {
-          console.log("Farcaster SDK not available")
-          throw new Error("Farcaster SDK not available")
+      const { token, user } = await initMiniAppAuth()
+      
+      if (token && user) {
+        console.log("Farcaster authentication successful")
+        return {
+          ...mockFarcasterUser,
+          token: token,
+          signature: user.signature,
+          message: user.message,
+          authMethod: user.authMethod
         }
-        
-        if (farcasterSDK && farcasterSDK.quickAuth) {
-          console.log("Using Farcaster Quick Auth...")
-          
-          // Try to get a Quick Auth token
-          const { token } = await farcasterSDK.quickAuth.getToken()
-          console.log("Quick Auth token received:", !!token)
-          
-          if (token) {
-            // Use the token to make an authenticated request to get user data
-            // For now, we'll use mock data but with a real token
-            console.log("Quick Auth successful, using mock user data with real token")
-            return {
-              ...mockFarcasterUser,
-              token: token // Include the token for future use
-            }
-          }
-        }
-        
-        // Fallback to traditional authentication if Quick Auth fails
-        if (farcasterSDK && farcasterSDK.actions) {
-          console.log("Falling back to traditional authentication...")
-          
-          if (farcasterSDK.actions.ready) {
-            await farcasterSDK.actions.ready()
-            console.log("Farcaster SDK ready")
-          }
-          
-          if (farcasterSDK.actions.isAuthenticated) {
-            console.log("Calling isAuthenticated...")
-            const isAuthenticated = await farcasterSDK.actions.isAuthenticated()
-            console.log("User authenticated:", isAuthenticated)
-            
-            if (isAuthenticated && farcasterSDK.actions.getUserData) {
-              const userData = await farcasterSDK.actions.getUserData()
-              console.log("User data received:", userData)
-              
-              if (userData) {
-                return {
-                  username: userData.username || mockFarcasterUser.username,
-                  address: userData.address || userData.verifiedAddresses?.[0] || mockFarcasterUser.address,
-                  fid: userData.fid || mockFarcasterUser.fid,
-                  displayName: userData.displayName || mockFarcasterUser.displayName
-                }
-              }
-            }
-          }
-        }
-        
-      } catch (sdkError) {
-        console.warn("Farcaster authentication error:", sdkError)
-        // Fallback to mock data if SDK fails
-        return mockFarcasterUser
       }
+      
+      console.log("Farcaster authentication failed, using mock data")
+      return mockFarcasterUser
     }
     
     // Development mode or previewer - use mock data
@@ -257,7 +257,8 @@ export async function getAuthenticatedAddress(): Promise<string> {
 
 // Make authenticated requests using Quick Auth
 export async function makeAuthenticatedRequest(url: string, options: RequestInit = {}) {
-  if (isFarcasterEnvironment() && farcasterSDK && farcasterSDK.quickAuth) {
+  const token = await getAuthToken()
+  if (token) {
     try {
       console.log("Making authenticated request with Quick Auth...")
       return await farcasterSDK.quickAuth.fetch(url, options)
@@ -274,14 +275,5 @@ export async function makeAuthenticatedRequest(url: string, options: RequestInit
 
 // Get Quick Auth token
 export async function getQuickAuthToken() {
-  if (isFarcasterEnvironment() && farcasterSDK && farcasterSDK.quickAuth) {
-    try {
-      const { token } = await farcasterSDK.quickAuth.getToken()
-      return token
-    } catch (error) {
-      console.warn("Failed to get Quick Auth token:", error)
-      return null
-    }
-  }
-  return null
+  return await getAuthToken()
 }

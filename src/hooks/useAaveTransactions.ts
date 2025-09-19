@@ -3,7 +3,7 @@ import { useAccount } from 'wagmi'
 import { parseUnits, formatUnits } from 'viem'
 import { createWalletClient, createPublicClient, http, getContract } from 'viem'
 import { baseSepolia } from 'viem/chains'
-import { getAuthenticatedAddress, getFarcasterSDK, isFarcasterEnvironment, mockFarcasterUser } from '../utils/farcaster'
+import { getAuthenticatedAddress, getAuthToken, isFarcasterEnvironment, mockFarcasterUser } from '../utils/farcaster'
 import type { Token } from '../types'
 
 // Aave V3 Pool ABI - minimal for core functions
@@ -111,16 +111,11 @@ export function calculateTransactionFee(amount: string): string {
 // Check if we're in a real Farcaster environment with actual wallet
 async function isRealFarcasterEnvironment() {
   try {
-    const sdk = getFarcasterSDK()
-    if (!sdk || !isFarcasterEnvironment()) return false
+    const token = await getAuthToken()
+    if (!token) return false
     
-    // Check if we have a real authenticated user (not mock)
-    const isAuthenticated = await sdk.actions.isAuthenticated()
-    if (!isAuthenticated) return false
-    
-    const userData = await sdk.actions.getUserData()
-    // If we get mock data, we're in previewer/development
-    return userData && userData.address !== mockFarcasterUser.address
+    // If we have a token, we're authenticated
+    return true
   } catch (error) {
     console.warn('Error checking real Farcaster environment:', error)
     return false
