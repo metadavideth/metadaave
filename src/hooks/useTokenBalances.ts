@@ -7,10 +7,10 @@ import { useEnrichedTokens } from './useAaveData'
 import { getAuthenticatedAddress } from '../utils/farcaster'
 import type { Token } from '../types'
 
-// Create a public client for Base Sepolia
+// Create a public client for Base Sepolia with reliable RPC
 const publicClient = createPublicClient({
   chain: baseSepolia,
-  transport: http()
+  transport: http('https://sepolia.base.org')
 })
 
 // ERC20 ABI for balance checking
@@ -38,6 +38,8 @@ async function fetchTokenBalance(
   decimals: number = 18
 ): Promise<string> {
   try {
+    console.log(`[balance] Fetching balance for ${tokenAddress} (${decimals} decimals)`)
+    
     const balance = await publicClient.readContract({
       address: tokenAddress as `0x${string}`,
       abi: ERC20_ABI,
@@ -45,9 +47,15 @@ async function fetchTokenBalance(
       args: [userAddress as `0x${string}`]
     })
 
-    return formatUnits(balance, decimals)
+    const formattedBalance = formatUnits(balance, decimals)
+    console.log(`[balance] ${tokenAddress}: ${balance} raw -> ${formattedBalance} formatted`)
+    return formattedBalance
   } catch (error) {
-    console.warn(`Failed to fetch balance for token ${tokenAddress}:`, error)
+    console.warn(`[balance] Failed to fetch balance for token ${tokenAddress}:`, error)
+    // Check if it's a "no data" error - this usually means the contract doesn't exist
+    if (error.message?.includes('returned no data')) {
+      console.warn(`[balance] Contract ${tokenAddress} may not exist on Base Sepolia`)
+    }
     return '0'
   }
 }
@@ -68,19 +76,20 @@ async function fetchAllTokenBalances(farcasterWalletAddress: `0x${string}`, chai
 
     console.log('Fetching token balances for Farcaster wallet:', farcasterWalletAddress)
 
-    const balancePromises = AAVE_V3_BASE_TOKENS.map(async (token) => {
-      try {
-        const balance = await fetchTokenBalance(token.address, farcasterWalletAddress, token.decimals || 18)
-        return { address: token.address, balance }
-      } catch (err: any) {
-        if (String(err?.name || '').includes('ContractFunctionZeroDataError')) {
-          // Skip token silently
-          return null;
-        }
-        // Surface real errors
-        throw err;
-      }
-    })
+          const balancePromises = AAVE_V3_BASE_TOKENS.map(async (token) => {
+            try {
+              const balance = await fetchTokenBalance(token.address, farcasterWalletAddress, token.decimals || 18)
+              return { address: token.address, balance }
+            } catch (err: any) {
+              if (String(err?.name || '').includes('ContractFunctionZeroDataError')) {
+                // Skip token silently - contract doesn't exist
+                console.warn(`[balance] Skipping token ${token.symbol} (${token.address}) - contract not found`)
+                return null;
+              }
+              // Surface real errors
+              throw err;
+            }
+          })
 
     const results = await Promise.all(balancePromises)
     
