@@ -4,7 +4,8 @@ import { useEffect, useState } from "react"
 import { initMiniAppAuth, isFarcasterEnvironment, mockFarcasterUser } from "../utils/farcaster"
 import { makeSiweNonce } from "../utils/auth"
 import { sdk as farcasterSDK } from "@farcaster/miniapp-sdk"
-import { verifyFarcasterWallet } from "../lib/verifyWallet"
+import { verifyFarcasterWallet, verifyWalletWithSdkProvider } from "../lib/verifyWallet"
+import { makeSdkEthProvider } from "../lib/farcasterEth"
 import { useWallet } from "../contexts/WalletContext"
 
 function shortenAddress(address?: string) {
@@ -148,20 +149,21 @@ export function Header() {
         return
       }
 
+      console.log("[wallet] starting verification via Farcaster SDK bridge only...");
       try {
-        console.log("[wallet] starting verification via Farcaster provider...");
-        const res = await verifyFarcasterWallet();
-        console.log("[wallet] verified Farcaster Wallet:", res.address, "chainId:", res.chainId);
-        setFarcasterWalletAddress(res.address);
-        setChainId(res.chainId);
+        const eth = makeSdkEthProvider(farcasterSDK);
+        const result = await verifyWalletWithSdkProvider(eth);
+        console.log("[wallet] verified via Farcaster bridge:", result);
+        setFarcasterWalletAddress(result.address);
+        setChainId(`0x${result.chainId.toString(16)}`);
       } catch (err) {
-        console.error("[wallet] verification failed:", err);
+        console.error("[wallet] verification failed (SDK bridge):", err);
         setError(err instanceof Error ? err.message : 'Wallet verification failed');
         return;
       }
 
       setUsername("Farcaster User")
-      setAddress(res.address)
+      setAddress(result.address)
       setIsConnected(true)
     } catch (e: any) {
       console.error("Connection error:", e)

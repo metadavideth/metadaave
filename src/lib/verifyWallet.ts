@@ -1,4 +1,5 @@
 import { recoverMessageAddress, recoverTypedDataAddress } from "viem";
+import type { Eip1193 } from "./farcasterEth";
 
 const VERIFY_MSG = "miniapp:verify";
 
@@ -190,4 +191,60 @@ export async function verifyFarcasterWallet() {
 
   console.log("[wallet] verify: typed-data ok for", addr);
   return { address: addr.toLowerCase(), chainId: chainIdHex };
+}
+
+/** Wraps existing verification flow but forces the provider to be the SDK bridge only. */
+export async function verifyWalletWithSdkProvider(provider: Eip1193) {
+  // 1) Read chain & account without requesting permissions
+  const [chainIdHex, accounts] = await Promise.all([
+    provider.request({ method: "eth_chainId" }),
+    provider.request({ method: "eth_accounts" }),
+  ]);
+  const chainId = typeof chainIdHex === "string" ? parseInt(chainIdHex, 16) : Number(chainIdHex);
+  const address = accounts?.[0];
+  if (!address) throw new Error("Embedded Farcaster wallet has no active account (eth_accounts empty).");
+
+  // 2) Build BigInt-safe timestamp message for personal_sign
+  const tsSec = Math.floor(Date.now() / 1000);
+  const msg = `MetaDaave MiniApp wallet verification\naddress:${address}\nchainId:${chainId}\nts:${tsSec}`;
+
+  // 3) Try personal_sign first
+  let signature: string | null = null;
+  try {
+    signature = await provider.request({
+      method: "personal_sign",
+      params: [msg, address],
+    }) as string;
+    console.log("[wallet] verify: personal_sign ok");
+  } catch (e) {
+    console.warn("[verify] personal_sign failed, trying typed-data v4:", e);
+  }
+
+  // 4) Fallback to EIP-712 typed data if needed
+  if (!signature) {
+    const domain = { name: "MetaDaave MiniApp", version: "1", chainId };
+    const types = {
+      EIP712Domain: [
+        { name: "name", type: "string" },
+        { name: "version", type: "string" },
+        { name: "chainId", type: "uint256" },
+      ],
+      Verify: [
+        { name: "address", type: "address" },
+        { name: "chainId", type: "uint256" },
+        { name: "ts", type: "uint256" },
+      ],
+    };
+    const value = { address, chainId, ts: tsSec.toString() }; // string for JSON safety
+
+    signature = await provider.request({
+      method: "eth_signTypedData_v4",
+      params: [address, JSON.stringify({ domain, types, primaryType: "Verify", message: value })],
+    }) as string;
+
+    console.log("[wallet] verify: typed-data ok");
+  }
+
+  // 5) Return the minimal verified bundle (recovery already handled in your previous impl if you need it)
+  return { address, chainId, signature, ts: tsSec };
 }
