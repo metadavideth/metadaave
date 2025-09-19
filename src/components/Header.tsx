@@ -4,9 +4,7 @@ import { useEffect, useState } from "react"
 import { initMiniAppAuth, isFarcasterEnvironment, mockFarcasterUser } from "../utils/farcaster"
 import { makeSiweNonce } from "../utils/auth"
 import { sdk as farcasterSDK } from "@farcaster/miniapp-sdk"
-import { verifyFarcasterWallet, verifyWalletWithSdkProvider } from "../lib/verifyWallet"
-import { makeSdkEthProvider } from "../lib/farcasterEth"
-import { sdkHasEthBridge } from "../lib/sdkHasEthBridge"
+import { useAccount, useConnect } from "wagmi"
 import { Notice } from "./Notice"
 import { useWallet } from "../contexts/WalletContext"
 
@@ -24,15 +22,14 @@ export function Header() {
   const [isAuthenticating, setIsAuthenticating] = useState(false)
   const { farcasterWalletAddress, chainId, setFarcasterWalletAddress, setChainId } = useWallet()
   
-  // Check if SDK has ETH bridge
-  const hasBridge = sdkHasEthBridge(farcasterSDK)
+  // Use Wagmi hooks for wallet connection
+  const { isConnected: wagmiConnected, address: wagmiAddress } = useAccount()
+  const { connect, connectors } = useConnect()
   
-  // Debug logging for bridge detection
-  console.log('[bridge] SDK actions:', Object.keys(farcasterSDK?.actions || {}))
-  console.log('[bridge] has ethProviderRequestV2:', typeof farcasterSDK?.actions?.ethProviderRequestV2)
-  console.log('[bridge] has ethProviderRequest:', typeof farcasterSDK?.actions?.ethProviderRequest)
-  console.log('[bridge] has openUrl:', typeof farcasterSDK?.actions?.openUrl)
-  console.log('[bridge] hasBridge result:', hasBridge)
+  // Debug logging for Wagmi connection
+  console.log('[wagmi] isConnected:', wagmiConnected)
+  console.log('[wagmi] address:', wagmiAddress)
+  console.log('[wagmi] connectors:', connectors.length)
 
   useEffect(() => {
     let mounted = true
@@ -180,8 +177,8 @@ export function Header() {
     setChainId(undefined)
   }
 
-  // Show fallback UI if no ETH bridge available
-  if (!hasBridge) {
+  // Show fallback UI if not connected to wallet
+  if (!wagmiConnected) {
     return (
       <header className="bg-card border-b border-border p-4">
         <div className="flex items-center justify-between mb-4">
@@ -193,49 +190,16 @@ export function Header() {
           </div>
         </div>
         <Notice
-          title="Wallet actions not available in this environment"
-          body="You are currently in the Farcaster wallet web interface. The Ethereum provider bridge is only available in the Farcaster mobile app. To use wallet features, please open this Mini App in the Farcaster mobile app."
-          ctaLabel="Get Mobile App Instructions"
+          title="Connect your wallet to continue"
+          body="This Mini App requires a connected wallet to access DeFi features. Click the button below to connect your Farcaster wallet."
+          ctaLabel="Connect Wallet"
           onCta={() => {
-            // Check if we're already in a Farcaster environment
-            const isInFarcasterIframe = window.top !== window.self;
-            const isInFarcasterWallet = window.location.hostname.includes('wallet.farcaster.xyz');
-            
-            console.log('[deep-link] Environment check:', {
-              isInFarcasterIframe,
-              isInFarcasterWallet,
-              hostname: window.location.hostname,
-              hasOpenUrl: !!farcasterSDK?.actions?.openUrl
-            });
-            
-            if (isInFarcasterIframe || isInFarcasterWallet) {
-              // We're already in Farcaster - show helpful message instead of trying to open new tab
-              alert('You are already in the Farcaster wallet! The ETH bridge is not available in this environment. Please open this Mini App in the Farcaster mobile app for full functionality.');
-              return;
+            console.log('[connect] Attempting to connect wallet via Wagmi');
+            if (connectors.length > 0) {
+              connect({ connector: connectors[0] });
+            } else {
+              console.error('[connect] No connectors available');
             }
-            
-            // Only try deep linking if we're NOT in Farcaster environment
-            const currentUrl = window.location.href;
-            
-            // Try SDK method first (for mobile app context)
-            if (farcasterSDK?.actions?.openUrl) {
-              try {
-                // Use a proper deep link format for mobile app
-                const deepLink = `farcaster://miniapp?url=${encodeURIComponent(currentUrl)}`;
-                console.log('[deep-link] Trying SDK openUrl with:', deepLink);
-                farcasterSDK.actions.openUrl(deepLink);
-                return;
-              } catch (e) {
-                console.warn('SDK openUrl failed:', e);
-              }
-            }
-            
-            // Fallback: Copy URL to clipboard with instructions
-            navigator.clipboard.writeText(currentUrl).then(() => {
-              alert('URL copied to clipboard! Please open the Farcaster mobile app and paste this URL to access the Mini App with full wallet functionality.');
-            }).catch(() => {
-              alert('Please manually open this URL in the Farcaster mobile app: ' + currentUrl);
-            });
           }}
         />
       </header>
@@ -271,33 +235,31 @@ export function Header() {
 
         {/* Right: Farcaster user info */}
         <div className="flex items-center gap-2">
-          {isConnected ? (
+          {wagmiConnected && wagmiAddress ? (
             <>
               <div className="flex items-center gap-2">
                 <div className="text-sm">
-                  <div className="font-medium text-card-foreground">@{username}</div>
-                  <div className="text-xs text-muted-foreground">{shortenAddress(address)}</div>
+                  <div className="font-medium text-card-foreground">Farcaster Wallet</div>
+                  <div className="text-xs text-muted-foreground">{shortenAddress(wagmiAddress)}</div>
                 </div>
-                {farcasterWalletAddress && (
-                  <div className="flex items-center gap-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-2 py-1 rounded-full text-xs">
-                    <span>Connected: Farcaster Wallet</span>
-                    <button
-                      onClick={() => navigator.clipboard.writeText(farcasterWalletAddress)}
-                      className="hover:bg-green-200 dark:hover:bg-green-800 rounded px-1"
-                      title="Copy address"
-                    >
-                      📋
-                    </button>
-                  </div>
-                )}
-                {chainId && (
-                  <div className="text-xs text-muted-foreground">
-                    {chainId === '0x2105' ? 'Base' : `Chain ${parseInt(chainId, 16)}`}
-                  </div>
-                )}
+                <div className="flex items-center gap-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-2 py-1 rounded-full text-xs">
+                  <span>Connected</span>
+                  <button
+                    onClick={() => navigator.clipboard.writeText(wagmiAddress)}
+                    className="hover:bg-green-200 dark:hover:bg-green-800 rounded px-1"
+                    title="Copy address"
+                  >
+                    📋
+                  </button>
+                </div>
               </div>
               <button
-                onClick={handleDisconnect}
+                onClick={() => {
+                  // Wagmi doesn't have a direct disconnect, but we can reset our local state
+                  setFarcasterWalletAddress(undefined)
+                  setChainId(undefined)
+                  window.location.reload() // Simple way to reset connection
+                }}
                 className="bg-secondary text-secondary-foreground border border-border rounded-lg px-4 py-2 text-sm hover:bg-secondary/80 transition-colors"
               >
                 Disconnect
@@ -305,11 +267,17 @@ export function Header() {
             </>
           ) : (
             <button
-              onClick={handleConnect}
-              disabled={isLoading}
-              className="bg-primary text-white rounded-lg px-4 py-2 text-sm disabled:opacity-60 disabled:cursor-not-allowed hover:bg-primary/90 transition-colors"
+              onClick={() => {
+                console.log('[connect] Attempting to connect wallet via Wagmi');
+                if (connectors.length > 0) {
+                  connect({ connector: connectors[0] });
+                } else {
+                  console.error('[connect] No connectors available');
+                }
+              }}
+              className="bg-primary text-white rounded-lg px-4 py-2 text-sm hover:bg-primary/90 transition-colors"
             >
-              {isLoading ? "Loading..." : "Connect with Farcaster"}
+              Connect Wallet
             </button>
           )}
           
