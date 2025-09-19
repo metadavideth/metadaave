@@ -32,66 +32,25 @@ export function Header() {
   console.log('[wagmi] connectors:', connectors.length)
 
   useEffect(() => {
-    let mounted = true
-    
-    async function init() {
-      try {
-        setIsLoading(true)
-        
-        // Check if we should try Farcaster environment
-        const isFarcasterEnv = isFarcasterEnvironment()
-        
-        console.log("Farcaster environment check:", {
-          isFarcasterEnv,
-          hostname: window.location.hostname,
-          isIframe: window.self !== window.top,
-          hasFarcasterSDK: !!(window as any).FarcasterMiniApp,
-          referrer: document.referrer
-        })
-        
-        if (isFarcasterEnv) {
-          // Check if we already have a token without triggering auth
-          try {
-            await farcasterSDK.actions.ready()
-            const existingToken = farcasterSDK.quickAuth.token
-            if (existingToken) {
-              console.log("Found existing Farcaster token")
-              if (mounted) {
-                setUsername("Farcaster User")
-                setAddress("0x" + existingToken.slice(0, 40)) // Use token as address placeholder
-                setIsConnected(true)
-              }
-            } else {
-              console.log("No existing token, user needs to connect")
-              if (mounted) {
-                setError("Please connect your Farcaster wallet")
-              }
-            }
-          } catch (error) {
-            console.log("SDK not ready, user needs to connect")
-            if (mounted) {
-              setError("Please connect your Farcaster wallet")
-            }
-          }
-        } else {
-          // Not in Farcaster environment, show appropriate message
-          console.log("Not in Farcaster environment, user will need to connect manually")
-          if (mounted) {
-            setError("Not in Farcaster environment. Please access this app via Farcaster/Warpcast to use real authentication, or use the connect button to test with mock data.")
-          }
-        }
-      } catch (e: any) {
-        if (mounted) setError(e?.message ?? "Failed to initialize Farcaster Mini App")
-      } finally {
-        if (mounted) setIsLoading(false)
+    // Update local state when Wagmi connection changes
+    if (wagmiConnected && wagmiAddress) {
+      setUsername("Farcaster User")
+      setAddress(wagmiAddress)
+      setIsConnected(true)
+      setError(null)
+      // Update context with the connected address
+      setFarcasterWalletAddress(wagmiAddress)
+    } else {
+      setUsername("")
+      setAddress("")
+      setIsConnected(false)
+      setFarcasterWalletAddress(undefined)
+      if (!wagmiConnected) {
+        setError("Please connect your Farcaster wallet")
       }
     }
-    
-    init()
-    return () => {
-      mounted = false
-    }
-  }, [])
+    setIsLoading(false)
+  }, [wagmiConnected, wagmiAddress, setFarcasterWalletAddress])
 
   const handleConnect = async () => {
     // Prevent double in-flight sign-ins
