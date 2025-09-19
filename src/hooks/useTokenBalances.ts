@@ -98,14 +98,10 @@ async function fetchAllTokenBalances(farcasterWalletAddress: `0x${string}`, chai
 
 // Hook to get user token balances using Farcaster wallet
 export function useTokenBalances(farcasterWalletAddress?: `0x${string}`, chainId?: string) {
-  // Early-out when not connected
-  if (!farcasterWalletAddress || !chainId) {
-    return { data: [], isLoading: false, error: null, status: 'idle' } as const
-  }
-
   return useQuery({
     queryKey: ['token-balances', 'farcaster', farcasterWalletAddress, chainId],
-    queryFn: () => fetchAllTokenBalances(farcasterWalletAddress, chainId),
+    queryFn: () => fetchAllTokenBalances(farcasterWalletAddress!, chainId!),
+    enabled: !!farcasterWalletAddress && !!chainId,
     staleTime: 10000, // 10 seconds
     refetchInterval: 30000, // Refetch every 30 seconds
     retry: false, // Prevent retry loops
