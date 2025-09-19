@@ -12,12 +12,19 @@ import { sdk as farcasterSDK } from "@farcaster/miniapp-sdk"
 // Initialize Mini App authentication using the correct SDK API
 export async function initMiniAppAuth(): Promise<{ token?: string; user?: any }> {
   try {
+    // Runtime debugging values
+    console.log("🔍 RUNTIME DEBUG VALUES:")
+    console.log("window.top !== window.self:", window.top !== window.self)
+    console.log("Object.keys(sdk.actions):", Object.keys(farcasterSDK.actions))
+    
     // Ensure SDK is ready
-    await farcasterSDK.actions.ready()
-    console.log("✅ Farcaster SDK ready")
+    const readyResult = await farcasterSDK.actions.ready()
+    console.log("await sdk.actions.ready() result:", readyResult)
     
     // Check if we already have a token
     const existingToken = farcasterSDK.quickAuth.token
+    console.log("await sdk.quickAuth.getToken() result:", existingToken)
+    
     if (existingToken) {
       console.log("✅ Using existing token, skipping signIn")
       return { 
