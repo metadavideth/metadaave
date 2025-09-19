@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { initMiniAppAuth, isFarcasterEnvironment, mockFarcasterUser } from "../utils/farcaster"
+import { makeSiweNonce } from "../utils/auth"
 import { sdk as farcasterSDK } from "@farcaster/miniapp-sdk"
 
 function shortenAddress(address?: string) {
@@ -105,32 +106,42 @@ export function Header() {
       setIsAuthenticating(true)
       setError(null)
       
-      // Check Farcaster environment
-      const isFarcasterEnv = isFarcasterEnvironment()
-      
-      console.log("Connect attempt - Farcaster environment check:", {
-        isFarcasterEnv,
-        hostname: window.location.hostname
-      })
-      
-      if (isFarcasterEnv) {
-        // Attempt Farcaster authentication
-        const { token, user } = await initMiniAppAuth()
+      // Log environment and ensure we don't skip due to a fragile detector
+      console.log('[auth] inIframe', window.top !== window.self);
+      console.log('[auth] sdk.version', farcasterSDK?.version);
+      console.log('[auth] actions', Object.keys(farcasterSDK?.actions || {}));
+
+      console.log('[auth] pre token', farcasterSDK.quickAuth.token);
+      await farcasterSDK.actions.ready();
+      console.log('[auth] ready:ok');
+
+
+      // If sdk.quickAuth.token exists, skip signIn and set authed=true
+      const pre = farcasterSDK.quickAuth.token;
+      console.log('[auth] preexisting token', pre);
+
+      let token = pre;
+      if (!token) {
+        // Generate and validate nonce
+        const nonce = makeSiweNonce(16)
+        console.log('[auth] nonce (local):', nonce, 'alnum?', /^[a-z0-9]+$/i.test(nonce))
         
-        if (token && user) {
-          setUsername("Farcaster User")
-          setAddress("0x" + user.signature.slice(0, 40)) // Use signature as address placeholder
-          setIsConnected(true)
-        } else {
-          setError("Please connect your Farcaster wallet")
-        }
-      } else {
-        // Not in Farcaster environment, allow mock data for testing
-        console.log("Not in Farcaster environment for connection - using mock data for testing")
-        setUsername(mockFarcasterUser.username)
-        setAddress(mockFarcasterUser.address)
+        // Call sdk.actions.signIn({ nonce }) unconditionally when user clicks Connect
+        const res = await farcasterSDK.actions.signIn({ nonce })
+        console.log('[auth] signIn result', res);
+        
+        // Immediately call await sdk.quickAuth.getToken() and treat a truthy token as authenticated
+        const got = await farcasterSDK.quickAuth.getToken().catch(() => undefined);
+        token = got?.token ?? got; // depending on SDK return shape
+        console.log('[auth] token after signIn', token);
+      }
+
+      if (token) {
+        setUsername("Farcaster User")
+        setAddress("0x" + token.slice(0, 40)) // Use token as address placeholder
         setIsConnected(true)
-        setError("Using mock data for testing. For real authentication, access via Farcaster/Warpcast.")
+      } else {
+        setError("Please connect your Farcaster wallet")
       }
     } catch (e: any) {
       console.error("Connection error:", e)

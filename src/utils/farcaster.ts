@@ -8,61 +8,68 @@ export const mockFarcasterUser = {
 
 // Import Farcaster SDK as per official documentation
 import { sdk as farcasterSDK } from "@farcaster/miniapp-sdk"
+import { makeSiweNonce, sanitizeNonce } from './auth'
+
+// Patch sdk.actions.signIn to guarantee an alphanumeric nonce
+if (farcasterSDK?.actions?.signIn && !(farcasterSDK as any).__noncePatched) {
+  const originalSignIn = farcasterSDK.actions.signIn
+  farcasterSDK.actions.signIn = async function patchedSignIn(args: any = {}) {
+    const supplied = sanitizeNonce(args.nonce)
+    const finalNonce = supplied || makeSiweNonce(16)
+    const patched = { ...args, nonce: finalNonce }
+    console.log('[monkey] signIn args AFTER:', patched, 'alnum?', /^[a-z0-9]+$/i.test(finalNonce))
+    return originalSignIn.call(farcasterSDK.actions, patched)
+  }
+  ;(farcasterSDK as any).__noncePatched = true
+  console.log('[monkey] Farcaster signIn patched (nonce enforced)')
+}
 
 // Initialize Mini App authentication using the correct SDK API
 export async function initMiniAppAuth(): Promise<{ token?: string; user?: any }> {
   try {
-    // Runtime debugging values
-    console.log("🔍 RUNTIME DEBUG VALUES:")
-    console.log("window.top !== window.self:", window.top !== window.self)
-    console.log("Object.keys(sdk.actions):", Object.keys(farcasterSDK.actions))
-    
-    // Ensure SDK is ready
-    const readyResult = await farcasterSDK.actions.ready()
-    console.log("await sdk.actions.ready() result:", readyResult)
-    
-    // Check if we already have a token
-    const existingToken = farcasterSDK.quickAuth.token
-    console.log("await sdk.quickAuth.getToken() result:", existingToken)
-    
-    if (existingToken) {
-      console.log("✅ Using existing token, skipping signIn")
-      return { 
-        token: existingToken, 
-        user: { 
-          signature: "existing", 
-          message: "existing", 
-          authMethod: "existing" 
-        } 
-      }
+    console.log('[auth] inIframe', window.top !== window.self);
+    console.log('[auth] sdk.version', farcasterSDK?.version);
+    console.log('[auth] actions', Object.keys(farcasterSDK?.actions || {}));
+
+    console.log('[auth] pre token', farcasterSDK.quickAuth.token);
+    await farcasterSDK.actions.ready();
+    console.log('[auth] ready:ok');
+
+
+    const pre = farcasterSDK.quickAuth.token;
+    console.log('[auth] preexisting token', pre);
+
+    let token = pre;
+    if (!token) {
+      // Generate and validate nonce
+      const nonce = makeSiweNonce(16)
+      console.log('[auth] nonce (local):', nonce, 'alnum?', /^[a-z0-9]+$/i.test(nonce))
+      
+      // Call sdk.actions.signIn({ nonce }) unconditionally when user clicks Connect
+      const res = await farcasterSDK.actions.signIn({ nonce })
+      console.log('[auth] signIn result', res);
+      
+      // Immediately call await sdk.quickAuth.getToken() and treat a truthy token as authenticated
+      const got = await farcasterSDK.quickAuth.getToken().catch(() => undefined);
+      token = got?.token ?? got; // depending on SDK return shape
+      console.log('[auth] token after signIn', token);
     }
-    
-    // Generate a random nonce
-    const nonce = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 15)
-    
-    // Log available actions for debugging
-    console.log("Available SDK actions:", Object.keys(farcasterSDK.actions))
-    
-    // Call signIn with nonce
-    console.log("🔄 Calling sdk.actions.signIn...")
-    const res = await farcasterSDK.actions.signIn({ nonce })
-    console.log("SignIn result:", { signature: res.signature, message: res.message, authMethod: res.authMethod })
-    
-    // Get Quick Auth token
-    console.log("🔄 Calling sdk.quickAuth.getToken...")
-    const { token } = await farcasterSDK.quickAuth.getToken().catch(() => ({ token: undefined }))
-    console.log("✅ Got token:", !!token)
-    
+
     return { 
       token, 
       user: { 
-        signature: res.signature, 
-        message: res.message, 
-        authMethod: res.authMethod 
+        signature: "authenticated", 
+        message: "authenticated", 
+        authMethod: "farcaster" 
       } 
     }
   } catch (error) {
     console.warn("Mini App auth failed:", error)
+    // Only fall back to mock if the user explicitly cancels sign-in
+    if (error.message?.includes('cancelled') || error.message?.includes('canceled')) {
+      console.log('[auth] user cancelled');
+      return { token: undefined, user: undefined }
+    }
     return { token: undefined, user: undefined }
   }
 }
@@ -82,58 +89,19 @@ export async function getAuthToken(): Promise<string | undefined> {
 export function isFarcasterEnvironment() {
   if (typeof window === "undefined") return false
   
-  console.log("Checking Farcaster environment...")
-  console.log("Environment details:", {
-    hostname: window.location.hostname,
-    isIframe: window.self !== window.top,
-    userAgent: navigator.userAgent,
+  // Safer check: SDK has ready method and we're in iframe
+  const isFarcasterEnv = !!farcasterSDK?.actions?.ready && window.top !== window.self
+  
+  console.log("Farcaster environment detection:", {
+    hasSDKReady: !!farcasterSDK?.actions?.ready,
+    isInIframe: window.top !== window.self,
+    isFarcasterEnv,
     referrer: document.referrer,
-    hasFarcasterSDK: !!(window as any).FarcasterMiniApp,
-    parentWindow: window.parent !== window,
-    searchParams: window.location.search
+    userAgent: navigator.userAgent,
+    search: window.location.search
   })
   
-  // Check for Farcaster SDK global
-  if ((window as any).FarcasterMiniApp) {
-    console.log("Farcaster SDK detected in global window")
-    return true
-  }
-  
-  // Check for Farcaster previewer or iframe context
-  if (window.location.hostname.includes("farcaster") || 
-      window.location.search.includes("farcaster") ||
-      window.location.search.includes("preview") ||
-      window.parent !== window) {
-    console.log("Farcaster environment detected via URL/iframe")
-    return true
-  }
-  
-  // Check if we're in an iframe (common for mini apps)
-  if (window.self !== window.top) {
-    console.log("Detected iframe context - likely Farcaster mini app")
-    return true
-  }
-  
-  // Check for Farcaster-specific user agent or referrer
-  if (navigator.userAgent.includes("farcaster") || 
-      document.referrer.includes("farcaster") ||
-      document.referrer.includes("warpcast")) {
-    console.log("Farcaster environment detected via user agent/referrer")
-    return true
-  }
-  
-  // If we're in an iframe or have any Farcaster indicators, assume we're in Farcaster
-  if (window.self !== window.top || 
-      window.location.search.includes("farcaster") ||
-      window.location.search.includes("preview") ||
-      document.referrer.includes("farcaster") ||
-      document.referrer.includes("warpcast")) {
-    console.log("Farcaster environment detected - will attempt SDK usage")
-    return true
-  }
-  
-  console.log("Not in Farcaster environment - SDK may not be available")
-  return false
+  return isFarcasterEnv
 }
 
 // Get Farcaster SDK instance - now imported as module
@@ -241,7 +209,7 @@ export async function waitForFarcasterSDK(timeout = 10000): Promise<any> {
   })
 }
 
-// Get user data from Farcaster SDK or return mock data
+// Get user data from Farcaster SDK or return undefined
 export async function getFarcasterUserData() {
   try {
     if (isFarcasterEnvironment()) {
@@ -258,16 +226,15 @@ export async function getFarcasterUserData() {
         }
       }
       
-      console.log("No existing token, using mock data")
-      return mockFarcasterUser
+      // No token, return undefined to keep showing Connect button
+      return undefined
     }
     
-    // Development mode or previewer - use mock data
-    console.log("Using mock data for development/previewer")
-    return mockFarcasterUser
+    // Not in Farcaster environment, return undefined
+    return undefined
   } catch (error) {
     console.warn("Error getting Farcaster user data:", error)
-    return mockFarcasterUser
+    return undefined
   }
 }
 

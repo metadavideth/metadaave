@@ -20,6 +20,13 @@ function App() {
   } | null>(null)
   const [selectedToken, setSelectedToken] = useState<Token>(AAVE_V3_BASE_TOKENS[0])
 
+  // Build marker
+  console.log(
+    '[build]',
+    import.meta?.env?.VITE_GIT_COMMIT || 'unknown-commit',
+    new Date().toISOString()
+  )
+
   // Call ready() when the interface is ready to be displayed
   // This follows the official Farcaster getting started guide
   useEffect(() => {

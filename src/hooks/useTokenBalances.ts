@@ -83,9 +83,14 @@ async function fetchAllTokenBalances(): Promise<Record<string, string>> {
 }
 
 // Hook to get user token balances using Farcaster wallet
-export function useTokenBalances() {
+export function useTokenBalances(farcasterWalletAddress?: `0x${string}`) {
+  // Early-out when not connected
+  if (!farcasterWalletAddress) {
+    return { data: [], isLoading: false, error: null }
+  }
+
   return useQuery({
-    queryKey: ['token-balances', 'farcaster'],
+    queryKey: ['token-balances', 'farcaster', farcasterWalletAddress],
     queryFn: fetchAllTokenBalances,
     staleTime: 10000, // 10 seconds
     refetchInterval: 30000, // Refetch every 30 seconds
@@ -94,9 +99,9 @@ export function useTokenBalances() {
 }
 
 // Hook to get enriched tokens with user balances
-export function useTokensWithBalances() {
+export function useTokensWithBalances(farcasterWalletAddress?: `0x${string}`) {
   const { tokens, isLoading: aaveLoading, error: aaveError, isUsingFallbackData } = useEnrichedTokens()
-  const { data: balances, isLoading: balanceLoading, error: balanceError } = useTokenBalances()
+  const { data: balances, isLoading: balanceLoading, error: balanceError } = useTokenBalances(farcasterWalletAddress)
 
   const enrichedTokens: Token[] = tokens.map(token => {
     const userBalance = balances?.[token.address.toLowerCase()] || '0'
@@ -110,7 +115,7 @@ export function useTokensWithBalances() {
       userBalanceFormatted,
       balance: userBalance !== '0' 
         ? `${userBalanceFormatted} ${token.symbol}`
-        : token.balance // Fallback to mock data if no balance
+        : '0' // No fallback to mock data
     }
   })
 
