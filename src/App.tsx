@@ -26,14 +26,23 @@ function App() {
   useEffect(() => {
     const callReady = async () => {
       try {
-        // Wait for SDK to be injected by Farcaster
-        const sdk = await waitForFarcasterSDK()
-        if (sdk && sdk.actions && sdk.actions.ready) {
-          console.log("✅ App: Calling sdk.actions.ready() as per Farcaster docs")
-          await sdk.actions.ready()
+        // Try to call ready() immediately - don't wait for SDK injection
+        // The SDK should be available on window.FarcasterMiniApp
+        if ((window as any).FarcasterMiniApp && (window as any).FarcasterMiniApp.actions) {
+          console.log("✅ App: Calling sdk.actions.ready() immediately")
+          await (window as any).FarcasterMiniApp.actions.ready()
           console.log("✅ App: Farcaster SDK ready() called successfully - splash screen should hide")
         } else {
-          console.log("❌ App: SDK not available or ready() method not found")
+          console.log("❌ App: FarcasterMiniApp not available, trying to wait for SDK...")
+          // Fallback: wait for SDK injection
+          const sdk = await waitForFarcasterSDK()
+          if (sdk && sdk.actions && sdk.actions.ready) {
+            console.log("✅ App: Calling sdk.actions.ready() after waiting")
+            await sdk.actions.ready()
+            console.log("✅ App: Farcaster SDK ready() called successfully - splash screen should hide")
+          } else {
+            console.log("❌ App: SDK not available or ready() method not found")
+          }
         }
       } catch (error) {
         console.warn("❌ App: Farcaster SDK ready() failed:", error)
