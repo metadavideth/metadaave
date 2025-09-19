@@ -71,13 +71,39 @@ export function isFarcasterEnvironment() {
 export function getFarcasterSDK() {
   if (typeof window === "undefined") return null
   
+  // Debug: Log the actual SDK structure
+  console.log("🔍 Debugging SDK structure:")
+  console.log("farcasterSDK:", farcasterSDK)
+  console.log("farcasterSDK type:", typeof farcasterSDK)
+  console.log("farcasterSDK keys:", farcasterSDK ? Object.keys(farcasterSDK) : "null")
+  
+  // Also check window for SDK
+  console.log("🔍 Checking window for SDK:")
+  console.log("window.FarcasterMiniApp:", (window as any).FarcasterMiniApp)
+  console.log("window keys with 'farcaster':", Object.keys(window).filter(k => k.toLowerCase().includes('farcaster')))
+  console.log("window keys with 'sdk':", Object.keys(window).filter(k => k.toLowerCase().includes('sdk')))
+  
+  if (farcasterSDK) {
+    console.log("farcasterSDK.actions:", farcasterSDK.actions)
+    console.log("farcasterSDK.actions type:", typeof farcasterSDK.actions)
+    if (farcasterSDK.actions) {
+      console.log("farcasterSDK.actions keys:", Object.keys(farcasterSDK.actions))
+    }
+  }
+  
+  // Try to get SDK from window first (as per Farcaster docs)
+  if ((window as any).FarcasterMiniApp) {
+    console.log("✅ Farcaster SDK found in window.FarcasterMiniApp")
+    return (window as any).FarcasterMiniApp
+  }
+  
   // SDK is now imported as a module, so we can return it directly
   if (farcasterSDK && farcasterSDK.actions) {
     console.log("✅ Farcaster SDK available via import")
     return farcasterSDK
   }
   
-  console.log("❌ Farcaster SDK not available via import")
+  console.log("❌ Farcaster SDK not available via import or window")
   return null
 }
 
@@ -207,6 +233,8 @@ export async function getFarcasterUserData() {
         // Fallback to traditional authentication if Quick Auth fails
         if (currentSDK && currentSDK.actions) {
           console.log("Falling back to traditional authentication...")
+          console.log("currentSDK.actions:", currentSDK.actions)
+          console.log("currentSDK.actions keys:", Object.keys(currentSDK.actions))
           
           if (currentSDK.actions.ready) {
             await currentSDK.actions.ready()
@@ -214,6 +242,7 @@ export async function getFarcasterUserData() {
           }
           
           if (currentSDK.actions.isAuthenticated) {
+            console.log("Calling isAuthenticated...")
             const isAuthenticated = await currentSDK.actions.isAuthenticated()
             console.log("User authenticated:", isAuthenticated)
             
