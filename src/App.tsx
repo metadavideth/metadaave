@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { sdk } from "@farcaster/miniapp-sdk"
+// SDK should be injected by Farcaster, not imported as a module
 import { Header } from "./components/Header"
 import { AssetSelector } from "./components/AssetSelector"
 import { ActionTabs } from "./components/ActionTabs"
@@ -10,6 +10,7 @@ import { SocialModal } from "./components/SocialModal"
 import { SecurityDisclaimer } from "./components/SecurityDisclaimer"
 import { AAVE_V3_BASE_TOKENS } from "./data/tokens"
 import type { Token } from "./types"
+import { waitForFarcasterSDK } from "./utils/farcaster"
 
 function App() {
   const [showSocialModal, setShowSocialModal] = useState(false)
@@ -25,9 +26,15 @@ function App() {
   useEffect(() => {
     const callReady = async () => {
       try {
-        console.log("✅ App: Calling sdk.actions.ready() as per Farcaster docs")
-        await sdk.actions.ready()
-        console.log("✅ App: Farcaster SDK ready() called successfully - splash screen should hide")
+        // Wait for SDK to be injected by Farcaster
+        const sdk = await waitForFarcasterSDK()
+        if (sdk && sdk.actions && sdk.actions.ready) {
+          console.log("✅ App: Calling sdk.actions.ready() as per Farcaster docs")
+          await sdk.actions.ready()
+          console.log("✅ App: Farcaster SDK ready() called successfully - splash screen should hide")
+        } else {
+          console.log("❌ App: SDK not available or ready() method not found")
+        }
       } catch (error) {
         console.warn("❌ App: Farcaster SDK ready() failed:", error)
         console.log("This might be expected in preview mode or if SDK is not available")

@@ -7,7 +7,8 @@ export const mockFarcasterUser = {
 }
 
 // Import Farcaster SDK as per official documentation
-import { sdk as farcasterSDK } from "@farcaster/miniapp-sdk"
+// Note: The SDK should be injected by Farcaster, not imported as a module
+// import { sdk as farcasterSDK } from "@farcaster/miniapp-sdk"
 
 // Check if we're in a Farcaster Mini App environment
 export function isFarcasterEnvironment() {
@@ -67,43 +68,41 @@ export function isFarcasterEnvironment() {
   return false
 }
 
-// Get Farcaster SDK instance - now imported as module
+// Get Farcaster SDK instance - should be injected by Farcaster
 export function getFarcasterSDK() {
   if (typeof window === "undefined") return null
   
   // Debug: Log the actual SDK structure
   console.log("🔍 Debugging SDK structure:")
-  console.log("farcasterSDK:", farcasterSDK)
-  console.log("farcasterSDK type:", typeof farcasterSDK)
-  console.log("farcasterSDK keys:", farcasterSDK ? Object.keys(farcasterSDK) : "null")
-  
-  // Also check window for SDK
-  console.log("🔍 Checking window for SDK:")
   console.log("window.FarcasterMiniApp:", (window as any).FarcasterMiniApp)
   console.log("window keys with 'farcaster':", Object.keys(window).filter(k => k.toLowerCase().includes('farcaster')))
   console.log("window keys with 'sdk':", Object.keys(window).filter(k => k.toLowerCase().includes('sdk')))
+  console.log("All window keys:", Object.keys(window).slice(0, 20))
   
-  if (farcasterSDK) {
-    console.log("farcasterSDK.actions:", farcasterSDK.actions)
-    console.log("farcasterSDK.actions type:", typeof farcasterSDK.actions)
-    if (farcasterSDK.actions) {
-      console.log("farcasterSDK.actions keys:", Object.keys(farcasterSDK.actions))
+  // Check for SDK in various possible locations
+  const possibleSDKs = [
+    (window as any).FarcasterMiniApp,
+    (window as any).farcaster,
+    (window as any).Farcaster,
+    (window as any).sdk,
+    (window as any).SDK
+  ]
+  
+  for (let i = 0; i < possibleSDKs.length; i++) {
+    const sdk = possibleSDKs[i]
+    if (sdk) {
+      console.log(`✅ Found SDK at index ${i}:`, sdk)
+      console.log("SDK type:", typeof sdk)
+      console.log("SDK keys:", Object.keys(sdk))
+      if (sdk.actions) {
+        console.log("SDK.actions:", sdk.actions)
+        console.log("SDK.actions keys:", Object.keys(sdk.actions))
+      }
+      return sdk
     }
   }
   
-  // Try to get SDK from window first (as per Farcaster docs)
-  if ((window as any).FarcasterMiniApp) {
-    console.log("✅ Farcaster SDK found in window.FarcasterMiniApp")
-    return (window as any).FarcasterMiniApp
-  }
-  
-  // SDK is now imported as a module, so we can return it directly
-  if (farcasterSDK && farcasterSDK.actions) {
-    console.log("✅ Farcaster SDK available via import")
-    return farcasterSDK
-  }
-  
-  console.log("❌ Farcaster SDK not available via import or window")
+  console.log("❌ No SDK found in any expected location")
   return null
 }
 
@@ -206,10 +205,10 @@ export async function getFarcasterUserData() {
       
       try {
         // Check if SDK is available
-        let currentSDK = farcasterSDK
+        const currentSDK = getFarcasterSDK()
         if (!currentSDK) {
-          console.log("Farcaster SDK not available, trying to get it...")
-          currentSDK = getFarcasterSDK()
+          console.log("Farcaster SDK not available")
+          throw new Error("Farcaster SDK not available")
         }
         
         if (currentSDK && currentSDK.quickAuth) {
@@ -286,14 +285,17 @@ export async function getAuthenticatedAddress(): Promise<string> {
 
 // Make authenticated requests using Quick Auth
 export async function makeAuthenticatedRequest(url: string, options: RequestInit = {}) {
-  if (isFarcasterEnvironment() && farcasterSDK && farcasterSDK.quickAuth) {
-    try {
-      console.log("Making authenticated request with Quick Auth...")
-      return await farcasterSDK.quickAuth.fetch(url, options)
-    } catch (error) {
-      console.warn("Quick Auth fetch failed:", error)
-      // Fallback to regular fetch
-      return fetch(url, options)
+  if (isFarcasterEnvironment()) {
+    const sdk = getFarcasterSDK()
+    if (sdk && sdk.quickAuth) {
+      try {
+        console.log("Making authenticated request with Quick Auth...")
+        return await sdk.quickAuth.fetch(url, options)
+      } catch (error) {
+        console.warn("Quick Auth fetch failed:", error)
+        // Fallback to regular fetch
+        return fetch(url, options)
+      }
     }
   }
   
@@ -303,13 +305,16 @@ export async function makeAuthenticatedRequest(url: string, options: RequestInit
 
 // Get Quick Auth token
 export async function getQuickAuthToken() {
-  if (isFarcasterEnvironment() && farcasterSDK && farcasterSDK.quickAuth) {
-    try {
-      const { token } = await farcasterSDK.quickAuth.getToken()
-      return token
-    } catch (error) {
-      console.warn("Failed to get Quick Auth token:", error)
-      return null
+  if (isFarcasterEnvironment()) {
+    const sdk = getFarcasterSDK()
+    if (sdk && sdk.quickAuth) {
+      try {
+        const { token } = await sdk.quickAuth.getToken()
+        return token
+      } catch (error) {
+        console.warn("Failed to get Quick Auth token:", error)
+        return null
+      }
     }
   }
   return null
