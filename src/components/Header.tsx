@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { initMiniAppAuth, isFarcasterEnvironment, mockFarcasterUser } from "../utils/farcaster"
 import { makeSiweNonce } from "../utils/auth"
 import { sdk as farcasterSDK } from "@farcaster/miniapp-sdk"
-import { useAccount, useConnect } from "wagmi"
+import { useAccount, useConnect, useChainId } from "wagmi"
 import { Notice } from "./Notice"
 import { useWallet } from "../contexts/WalletContext"
 
@@ -20,15 +20,17 @@ export function Header() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isAuthenticating, setIsAuthenticating] = useState(false)
-  const { farcasterWalletAddress, chainId, setFarcasterWalletAddress, setChainId } = useWallet()
+  const { farcasterWalletAddress, chainId: contextChainId, setFarcasterWalletAddress, setChainId } = useWallet()
   
   // Use Wagmi hooks for wallet connection
   const { isConnected: wagmiConnected, address: wagmiAddress } = useAccount()
   const { connect, connectors } = useConnect()
+  const wagmiChainId = useChainId()
   
   // Debug logging for Wagmi connection
   console.log('[wagmi] isConnected:', wagmiConnected)
   console.log('[wagmi] address:', wagmiAddress)
+  console.log('[wagmi] chainId:', wagmiChainId, 'hex:', `0x${wagmiChainId.toString(16)}`)
   console.log('[wagmi] connectors:', connectors.length)
 
   useEffect(() => {
@@ -38,19 +40,21 @@ export function Header() {
       setAddress(wagmiAddress)
       setIsConnected(true)
       setError(null)
-      // Update context with the connected address
+      // Update context with the connected address and chain ID
       setFarcasterWalletAddress(wagmiAddress)
+      setChainId(`0x${wagmiChainId.toString(16)}`)
     } else {
       setUsername("")
       setAddress("")
       setIsConnected(false)
       setFarcasterWalletAddress(undefined)
+      setChainId(undefined)
       if (!wagmiConnected) {
         setError("Please connect your Farcaster wallet")
       }
     }
     setIsLoading(false)
-  }, [wagmiConnected, wagmiAddress, setFarcasterWalletAddress])
+  }, [wagmiConnected, wagmiAddress, wagmiChainId, setFarcasterWalletAddress, setChainId])
 
   const handleConnect = async () => {
     // Prevent double in-flight sign-ins

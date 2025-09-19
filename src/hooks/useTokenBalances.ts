@@ -60,9 +60,9 @@ async function fetchAllTokenBalances(farcasterWalletAddress: `0x${string}`, chai
       return {}
     }
 
-    // Only fetch balances for Base chain (0x2105)
-    if (chainId && chainId !== '0x2105') {
-      console.log('Skipping balance fetch for non-Base chain:', chainId)
+    // Only fetch balances for Base Sepolia chain (0x14a34 = 84532)
+    if (chainId && chainId !== '0x14a34') {
+      console.log('Skipping balance fetch for non-Base Sepolia chain:', chainId)
       return {}
     }
 
