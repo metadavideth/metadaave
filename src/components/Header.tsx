@@ -148,10 +148,10 @@ export function Header() {
         return
       }
 
-      // Verify Farcaster Wallet with timeout and single attempt
+      // Verify Farcaster Wallet with personal_sign + typed-data fallback
       let verified;
       try {
-        verified = await verifyFarcasterWallet(); // <- NO Warpcast REST calls here
+        verified = await verifyFarcasterWallet();
         console.log('[wallet] verified Farcaster Wallet:', verified.address, 'chainId:', verified.chainId);
         setFarcasterWalletAddress(verified.address);
         setChainId(verified.chainId);
