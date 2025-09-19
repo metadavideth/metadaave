@@ -37,23 +37,27 @@ function App() {
   // Call ready() when the interface is ready to be displayed
   // This follows the official Farcaster getting started guide
   useEffect(() => {
-    const callReady = async () => {
+    (async () => {
       try {
         console.log("✅ App: Calling sdk.actions.ready() as per Farcaster docs")
         await sdk.actions.ready()
         console.log("✅ App: Farcaster SDK ready() called successfully - splash screen should hide")
+
+        // IMPORTANT: run the tripwire AFTER ready(), pass sdk for whitelisting
+        try {
+          assertNoExtensionProvider({ sdk });
+        } catch (err) {
+          // Outside Farcaster, extension present → we still fail hard
+          console.warn("[tripwire] hard block:", err);
+          // Optionally show a nice UI message instead of breaking the tree
+          // setError("Please open this mini app inside Farcaster.");
+          return;
+        }
       } catch (error) {
         console.warn("❌ App: Farcaster SDK ready() failed:", error)
         console.log("This might be expected in preview mode or if SDK is not available")
       }
-    }
-
-    callReady()
-  }, [])
-
-  // Tripwire against browser extensions
-  useEffect(() => {
-    assertNoExtensionProvider();
+    })();
   }, [])
 
   // Probe embedded provider for diagnostics

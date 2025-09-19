@@ -60,7 +60,8 @@ function findEmbeddedGlobalProvider(): any | null {
 
   // 3) **Single** injected provider on window.ethereum
   // Only accept this path when we are inside the Farcaster iframe AND it doesn't look like an extension.
-  if (isInFarcasterIframe()) {
+  const hasSdk = !!(g.__farcasterSdk?.actions?.signIn); // if you stash sdk globally
+  if (isInFarcasterIframe() || hasSdk) {
     const eth = g.ethereum;
     if (eth && typeof eth.request === "function" && !isExtensionLike(eth)) {
       // Optional: tag for downstream logic so tripwires can whitelist it
