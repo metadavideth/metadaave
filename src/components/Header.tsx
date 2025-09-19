@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { initMiniAppAuth, isFarcasterEnvironment, mockFarcasterUser } from "../utils/farcaster"
+import { sdk as farcasterSDK } from "@farcaster/miniapp-sdk"
 
 function shortenAddress(address?: string) {
   if (!address) return ""
@@ -16,6 +17,7 @@ export function Header() {
   const [error, setError] = useState<string | null>(null)
   const [debugInfo, setDebugInfo] = useState<any>(null)
   const [showDebug, setShowDebug] = useState(false)
+  const [isAuthenticating, setIsAuthenticating] = useState(false)
 
   useEffect(() => {
     let mounted = true
@@ -48,18 +50,25 @@ export function Header() {
         console.log("Farcaster environment check:", debugData)
         
         if (isFarcasterEnv) {
-          // Attempt Farcaster authentication
-          const { token, user } = await initMiniAppAuth()
-          
-          if (token && user) {
-            console.log("Farcaster authentication successful")
-            if (mounted) {
-              setUsername("Farcaster User")
-              setAddress("0x" + user.signature.slice(0, 40)) // Use signature as address placeholder
-              setIsConnected(true)
+          // Check if we already have a token without triggering auth
+          try {
+            await farcasterSDK.actions.ready()
+            const existingToken = farcasterSDK.quickAuth.token
+            if (existingToken) {
+              console.log("Found existing Farcaster token")
+              if (mounted) {
+                setUsername("Farcaster User")
+                setAddress("0x" + existingToken.slice(0, 40)) // Use token as address placeholder
+                setIsConnected(true)
+              }
+            } else {
+              console.log("No existing token, user needs to connect")
+              if (mounted) {
+                setError("Please connect your Farcaster wallet")
+              }
             }
-          } else {
-            console.log("Farcaster authentication failed")
+          } catch (error) {
+            console.log("SDK not ready, user needs to connect")
             if (mounted) {
               setError("Please connect your Farcaster wallet")
             }
@@ -85,8 +94,15 @@ export function Header() {
   }, [])
 
   const handleConnect = async () => {
+    // Prevent double in-flight sign-ins
+    if (isAuthenticating) {
+      console.log("Authentication already in progress, ignoring click")
+      return
+    }
+
     try {
       setIsLoading(true)
+      setIsAuthenticating(true)
       setError(null)
       
       // Check Farcaster environment
@@ -121,6 +137,7 @@ export function Header() {
       setError(e?.message ?? "Failed to authenticate with Farcaster")
     } finally {
       setIsLoading(false)
+      setIsAuthenticating(false)
     }
   }
 

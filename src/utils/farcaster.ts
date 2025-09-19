@@ -16,6 +16,20 @@ export async function initMiniAppAuth(): Promise<{ token?: string; user?: any }>
     await farcasterSDK.actions.ready()
     console.log("✅ Farcaster SDK ready")
     
+    // Check if we already have a token
+    const existingToken = farcasterSDK.quickAuth.token
+    if (existingToken) {
+      console.log("✅ Using existing token, skipping signIn")
+      return { 
+        token: existingToken, 
+        user: { 
+          signature: "existing", 
+          message: "existing", 
+          authMethod: "existing" 
+        } 
+      }
+    }
+    
     // Generate a random nonce
     const nonce = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 15)
     
@@ -23,11 +37,14 @@ export async function initMiniAppAuth(): Promise<{ token?: string; user?: any }>
     console.log("Available SDK actions:", Object.keys(farcasterSDK.actions))
     
     // Call signIn with nonce
+    console.log("🔄 Calling sdk.actions.signIn...")
     const res = await farcasterSDK.actions.signIn({ nonce })
     console.log("SignIn result:", { signature: res.signature, message: res.message, authMethod: res.authMethod })
     
     // Get Quick Auth token
+    console.log("🔄 Calling sdk.quickAuth.getToken...")
     const { token } = await farcasterSDK.quickAuth.getToken().catch(() => ({ token: undefined }))
+    console.log("✅ Got token:", !!token)
     
     return { 
       token, 
@@ -221,22 +238,20 @@ export async function waitForFarcasterSDK(timeout = 10000): Promise<any> {
 export async function getFarcasterUserData() {
   try {
     if (isFarcasterEnvironment()) {
-      console.log("Attempting Farcaster authentication...")
-      
-      const { token, user } = await initMiniAppAuth()
-      
-      if (token && user) {
-        console.log("Farcaster authentication successful")
+      // Check if we have an existing token without triggering auth
+      const existingToken = farcasterSDK.quickAuth.token
+      if (existingToken) {
+        console.log("Using existing Farcaster token")
         return {
           ...mockFarcasterUser,
-          token: token,
-          signature: user.signature,
-          message: user.message,
-          authMethod: user.authMethod
+          token: existingToken,
+          signature: "existing",
+          message: "existing",
+          authMethod: "existing"
         }
       }
       
-      console.log("Farcaster authentication failed, using mock data")
+      console.log("No existing token, using mock data")
       return mockFarcasterUser
     }
     
