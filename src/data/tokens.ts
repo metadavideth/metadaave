@@ -1,6 +1,6 @@
 import type { Token } from "../types"
 
-// Base Sepolia testnet token addresses - confirmed working addresses
+// Base Sepolia testnet token addresses - confirmed working addresses only
 export const AAVE_V3_BASE_TOKENS: Token[] = [
   {
     symbol: "USDC",
@@ -20,24 +20,7 @@ export const AAVE_V3_BASE_TOKENS: Token[] = [
     address: "0x4200000000000000000000000000000000000006", // WETH on Base Sepolia (confirmed working)
     decimals: 18,
   },
-  // Let's test the tokens you mentioned having
-  {
-    symbol: "EURC",
-    name: "Euro Coin",
-    icon: "💶",
-    apy: "3.95%",
-    balance: "0",
-    address: "0x60a3E35Cc302bFA44Cb288Bc5a4F316Fdb1adb42", // EURC on Base Sepolia
-    decimals: 6,
-  },
-  {
-    symbol: "cbBTC",
-    name: "Coinbase BTC",
-    icon: "₿",
-    apy: "2.89%",
-    balance: "0",
-    address: "0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf", // cbBTC on Base Sepolia
-    decimals: 8,
-  },
-  // Removed USDT since it doesn't exist on Base Sepolia
+  // Note: EURC and cbBTC contracts don't exist on Base Sepolia with the addresses we tested
+  // If you have these tokens, they might be on a different network or need different addresses
+  // You can check Base Sepolia block explorer: https://base-sepolia.blockscout.com/
 ]
