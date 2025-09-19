@@ -13,12 +13,12 @@
       "source": "/(.*)",
       "headers": [
         {
-          "key": "X-Frame-Options",
-          "value": "ALLOWALL"
+          "key": "Content-Security-Policy",
+          "value": "frame-ancestors https://farcaster.xyz https://wallet.farcaster.xyz;"
         },
         {
-          "key": "Content-Security-Policy",
-          "value": "frame-ancestors *;"
+          "key": "X-Frame-Options",
+          "value": "ALLOW-FROM https://farcaster.xyz"
         }
       ]
     }
