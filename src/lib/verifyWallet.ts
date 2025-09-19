@@ -34,39 +34,52 @@ function looksLikeExtension(eth: any) {
 async function getFarcasterProvider(): Promise<Eip1193> {
   const w = window as any;
 
-  // Candidates that are known to be injected by Warpcast/Privy inside Mini Apps
-  const candidates: Eip1193[] = [
+  // 1) Prefer explicit embedded handles if present
+  const explicitCandidates: any[] = [
     w?.farcaster?.walletProvider,
-    w?.walletProvider,             // some builds alias to this
-    w?.warpcast?.walletProvider,   // older/alt tag
-    w?.Privy?.getEmbeddedWalletProvider?.(), // Privy helper if present
-    w?.privy?.provider,            // alt Privy shape
+    w?.walletProvider,
+    w?.warpcast?.walletProvider,
+    w?.Privy?.getEmbeddedWalletProvider?.(),
+    w?.privy?.provider,
   ].filter(Boolean);
 
-  // Never fall back to window.ethereum — that invites extensions like Phantom/MetaMask.
-  const ext = (w as any).ethereum;
-  if (ext && looksLikeExtension(ext)) {
-    console.warn("[provider] Ignoring browser extension provider:", {
-      isMetaMask: !!ext.isMetaMask,
-      isPhantom: !!ext.isPhantom,
-      isCoinbaseWallet: !!ext.isCoinbaseWallet,
-      isBraveWallet: !!ext.isBraveWallet,
+  // 2) Also scan window.ethereum.providers[] for a non-extension provider
+  const eth = (w as any).ethereum;
+  const multi: any[] = Array.isArray(eth?.providers) ? eth.providers : [];
+  if (eth && !multi.length) {
+    // Some builds don't expose .providers; include eth as a last-chance candidate
+    multi.push(eth);
+  }
+
+  // De-dupe while preserving order
+  const seen = new Set<any>();
+  const candidates: any[] = [...explicitCandidates, ...multi].filter(p => p && !seen.has(p) && seen.add(p));
+
+  // Filter out known browser extensions
+  const nonExtensions = candidates.filter(p => {
+    const looksLikeExt =
+      !!p?.isMetaMask || !!p?.isPhantom || !!p?.isCoinbaseWallet || !!p?.isBraveWallet;
+    const hasRequest = typeof p?.request === "function";
+    return hasRequest && !looksLikeExt;
+  });
+
+  // Prefer any with embedded fingerprints if available
+  const preferred = nonExtensions.find(p =>
+    p?.isWarpcastEmbedded || p?.isFarcasterEmbedded || p?.isPrivyEmbedded || p?.providerName === "privy-embedded"
+  ) || nonExtensions[0];
+
+  if (preferred) {
+    console.log("[provider] Selected embedded (non-extension) provider", {
+      isWarpcastEmbedded: !!preferred.isWarpcastEmbedded,
+      isFarcasterEmbedded: !!preferred.isFarcasterEmbedded,
+      isPrivyEmbedded: !!preferred.isPrivyEmbedded,
+      providerName: preferred?.providerName,
     });
+    return preferred as Eip1193;
   }
 
-  // Pick the first embedded candidate that actually responds to request()
-  for (const p of candidates) {
-    if (p && typeof p.request === "function") {
-      console.log("[provider] Selected embedded Farcaster provider", {
-        isWarpcastEmbedded: !!p.isWarpcastEmbedded,
-        isFarcasterEmbedded: !!p.isFarcasterEmbedded,
-        isPrivyEmbedded: !!p.isPrivyEmbedded,
-        providerName: (p as any).providerName,
-      });
-      return p;
-    }
-  }
-
+  // If we got here, everything we can see is an extension or unusable
+  // Keep the hard fail to avoid Phantom/MetaMask hijack.
   throw new Error("Farcaster embedded wallet provider not found. Refusing to use browser extensions.");
 }
 
