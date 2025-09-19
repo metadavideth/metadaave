@@ -193,36 +193,49 @@ export function Header() {
           </div>
         </div>
         <Notice
-          title="Wallet actions not available on web"
-          body="To verify or sign with your wallet, open this Mini App in the Farcaster mobile app (or Wallet app) where the Ethereum provider bridge is available."
-          ctaLabel="Open in Farcaster"
+          title="Wallet actions not available in this environment"
+          body="You are currently in the Farcaster wallet web interface. The Ethereum provider bridge is only available in the Farcaster mobile app. To use wallet features, please open this Mini App in the Farcaster mobile app."
+          ctaLabel="Get Mobile App Instructions"
           onCta={() => {
-            // Try multiple deep link approaches
-            const currentUrl = window.location.href;
-            const farcasterUrl = `https://warpcast.com/~/add-cast-action?url=${encodeURIComponent(currentUrl)}`;
+            // Check if we're already in a Farcaster environment
+            const isInFarcasterIframe = window.top !== window.self;
+            const isInFarcasterWallet = window.location.hostname.includes('wallet.farcaster.xyz');
             
-            // Try SDK method first
+            console.log('[deep-link] Environment check:', {
+              isInFarcasterIframe,
+              isInFarcasterWallet,
+              hostname: window.location.hostname,
+              hasOpenUrl: !!farcasterSDK?.actions?.openUrl
+            });
+            
+            if (isInFarcasterIframe || isInFarcasterWallet) {
+              // We're already in Farcaster - show helpful message instead of trying to open new tab
+              alert('You are already in the Farcaster wallet! The ETH bridge is not available in this environment. Please open this Mini App in the Farcaster mobile app for full functionality.');
+              return;
+            }
+            
+            // Only try deep linking if we're NOT in Farcaster environment
+            const currentUrl = window.location.href;
+            
+            // Try SDK method first (for mobile app context)
             if (farcasterSDK?.actions?.openUrl) {
               try {
-                farcasterSDK.actions.openUrl(farcasterUrl);
+                // Use a proper deep link format for mobile app
+                const deepLink = `farcaster://miniapp?url=${encodeURIComponent(currentUrl)}`;
+                console.log('[deep-link] Trying SDK openUrl with:', deepLink);
+                farcasterSDK.actions.openUrl(deepLink);
                 return;
               } catch (e) {
                 console.warn('SDK openUrl failed:', e);
               }
             }
             
-            // Fallback to window.open
-            try {
-              window.open(farcasterUrl, '_blank');
-            } catch (e) {
-              console.warn('window.open failed:', e);
-              // Final fallback - copy URL to clipboard
-              navigator.clipboard.writeText(currentUrl).then(() => {
-                alert('URL copied to clipboard! Please open it in the Farcaster mobile app.');
-              }).catch(() => {
-                alert('Please manually open this URL in the Farcaster mobile app: ' + currentUrl);
-              });
-            }
+            // Fallback: Copy URL to clipboard with instructions
+            navigator.clipboard.writeText(currentUrl).then(() => {
+              alert('URL copied to clipboard! Please open the Farcaster mobile app and paste this URL to access the Mini App with full wallet functionality.');
+            }).catch(() => {
+              alert('Please manually open this URL in the Farcaster mobile app: ' + currentUrl);
+            });
           }}
         />
       </header>
