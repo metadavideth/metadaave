@@ -78,30 +78,15 @@ export function makeSdkEthProvider(sdk: AnySdk): Eip1193 {
   const hasV2 = typeof a.ethProviderRequestV2 === "function";
   const hasV1 = typeof a.ethProviderRequest === "function";
 
+  if (!hasV1 && !hasV2) {
+    throw new Error("Farcaster ETH bridge not available in this environment.");
+  }
+
   let bridge: ((req: EthRequest) => Promise<any>) | null = null;
   if (hasV2) {
     bridge = (req) => a.ethProviderRequestV2(req);
   } else if (hasV1) {
     bridge = (req) => a.ethProviderRequest(req.method as any, req.params ?? []);
-  } else {
-    const embedded = findEmbeddedGlobalProvider();
-    if (embedded) {
-      console.warn("[fc-eth] using embedded provider (no bridge available)");
-      return {
-        async request({ method, params }: EthRequest) {
-          console.log("[fc-eth:g] ->", method, params ?? []);
-          const res = await withTimeout(embedded.request({ method, params }), 30_000, `eth.${method}`);
-          console.log("[fc-eth:g] <-", method, res);
-          return res;
-        },
-      };
-    }
-
-    console.error("[fc-eth] sdk.actions keys:", Object.keys(a || {}));
-    console.error("[fc-eth] inIframe:", window.self !== window.top);
-    console.error("[fc-eth] host:", location.host);
-    console.error("[fc-eth] referrer:", document.referrer);
-    throw new Error("Farcaster SDK missing ethProviderRequest API and no embedded provider found.");
   }
 
   return {

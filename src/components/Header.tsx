@@ -6,6 +6,8 @@ import { makeSiweNonce } from "../utils/auth"
 import { sdk as farcasterSDK } from "@farcaster/miniapp-sdk"
 import { verifyFarcasterWallet, verifyWalletWithSdkProvider } from "../lib/verifyWallet"
 import { makeSdkEthProvider } from "../lib/farcasterEth"
+import { sdkHasEthBridge } from "../lib/sdkHasEthBridge"
+import { Notice } from "./Notice"
 import { useWallet } from "../contexts/WalletContext"
 
 function shortenAddress(address?: string) {
@@ -21,6 +23,9 @@ export function Header() {
   const [error, setError] = useState<string | null>(null)
   const [isAuthenticating, setIsAuthenticating] = useState(false)
   const { farcasterWalletAddress, chainId, setFarcasterWalletAddress, setChainId } = useWallet()
+  
+  // Check if SDK has ETH bridge
+  const hasBridge = sdkHasEthBridge(farcasterSDK)
 
   useEffect(() => {
     let mounted = true
@@ -166,6 +171,28 @@ export function Header() {
     setIsConnected(false)
     setFarcasterWalletAddress(undefined)
     setChainId(undefined)
+  }
+
+  // Show fallback UI if no ETH bridge available
+  if (!hasBridge) {
+    return (
+      <header className="bg-card border-b border-border p-4">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center space-x-3">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-lg">
+              🌐
+            </div>
+            <h1 className="text-xl font-bold text-card-foreground">metadaave</h1>
+          </div>
+        </div>
+        <Notice
+          title="Wallet actions not available on web"
+          body="To verify or sign with your wallet, open this Mini App in the Farcaster mobile app (or Wallet app) where the Ethereum provider bridge is available."
+          ctaLabel="Open in Farcaster"
+          onCta={() => farcasterSDK.actions.openUrl?.("farcaster://open-mini-app")}
+        />
+      </header>
+    )
   }
 
   if (isLoading) {
