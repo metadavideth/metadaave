@@ -9,37 +9,7 @@
     <title>metadaave</title>
     <!-- Preconnect to Farcaster Auth Server for better performance -->
     <link rel="preconnect" href="https://auth.farcaster.xyz" />
-  <script>
-    // Call ready() immediately when page loads - this is critical for Farcaster
-    (function() {
-      console.log('=== Farcaster Ready Call ===');
-      console.log('URL:', window.location.href);
-      console.log('Referrer:', document.referrer);
-      console.log('Is iframe:', window.self !== window.top);
-      
-      // Try to call ready() immediately
-      function callReady() {
-        if (window.FarcasterMiniApp && window.FarcasterMiniApp.actions && window.FarcasterMiniApp.actions.ready) {
-          console.log('✅ Calling ready() immediately...');
-          window.FarcasterMiniApp.actions.ready()
-            .then(() => {
-              console.log('✅ Farcaster SDK ready() called successfully - splash screen should hide');
-            })
-            .catch((error) => {
-              console.warn('❌ Farcaster SDK ready() failed:', error);
-            });
-        } else {
-          console.log('❌ FarcasterMiniApp not available yet, will retry...');
-          // Retry after a short delay
-          setTimeout(callReady, 100);
-        }
-      }
-      
-      // Call ready() immediately
-      callReady();
-    })();
-  </script>
-    <script type="module" crossorigin src="/assets/index-DBnb4DBn.js"></script>
+    <script type="module" crossorigin src="/assets/index-DvY_ZwEK.js"></script>
     <link rel="stylesheet" crossorigin href="/assets/index-BpI-vswP.css">
   </head>
   <body class="text-white">

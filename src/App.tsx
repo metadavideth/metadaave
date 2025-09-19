@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-// SDK should be injected by Farcaster, not imported as a module
+import { sdk } from "@farcaster/miniapp-sdk"
 import { Header } from "./components/Header"
 import { AssetSelector } from "./components/AssetSelector"
 import { ActionTabs } from "./components/ActionTabs"
@@ -10,7 +10,6 @@ import { SocialModal } from "./components/SocialModal"
 import { SecurityDisclaimer } from "./components/SecurityDisclaimer"
 import { AAVE_V3_BASE_TOKENS } from "./data/tokens"
 import type { Token } from "./types"
-import { waitForFarcasterSDK } from "./utils/farcaster"
 
 function App() {
   const [showSocialModal, setShowSocialModal] = useState(false)
@@ -26,24 +25,9 @@ function App() {
   useEffect(() => {
     const callReady = async () => {
       try {
-        // Try to call ready() immediately - don't wait for SDK injection
-        // The SDK should be available on window.FarcasterMiniApp
-        if ((window as any).FarcasterMiniApp && (window as any).FarcasterMiniApp.actions) {
-          console.log("✅ App: Calling sdk.actions.ready() immediately")
-          await (window as any).FarcasterMiniApp.actions.ready()
-          console.log("✅ App: Farcaster SDK ready() called successfully - splash screen should hide")
-        } else {
-          console.log("❌ App: FarcasterMiniApp not available, trying to wait for SDK...")
-          // Fallback: wait for SDK injection
-          const sdk = await waitForFarcasterSDK()
-          if (sdk && sdk.actions && sdk.actions.ready) {
-            console.log("✅ App: Calling sdk.actions.ready() after waiting")
-            await sdk.actions.ready()
-            console.log("✅ App: Farcaster SDK ready() called successfully - splash screen should hide")
-          } else {
-            console.log("❌ App: SDK not available or ready() method not found")
-          }
-        }
+        console.log("✅ App: Calling sdk.actions.ready() as per Farcaster docs")
+        await sdk.actions.ready()
+        console.log("✅ App: Farcaster SDK ready() called successfully - splash screen should hide")
       } catch (error) {
         console.warn("❌ App: Farcaster SDK ready() failed:", error)
         console.log("This might be expected in preview mode or if SDK is not available")
