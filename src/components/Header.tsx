@@ -148,21 +148,20 @@ export function Header() {
         return
       }
 
-      // Verify Farcaster Wallet with personal_sign + typed-data fallback
-      let verified;
       try {
-        verified = await verifyFarcasterWallet();
-        console.log('[wallet] verified Farcaster Wallet:', verified.address, 'chainId:', verified.chainId);
-        setFarcasterWalletAddress(verified.address);
-        setChainId(verified.chainId);
-      } catch (e) {
-        console.error('[wallet] verification failed:', e);
-        setError(e instanceof Error ? e.message : 'Wallet verification failed');
+        console.log("[wallet] starting verification via Farcaster provider...");
+        const res = await verifyFarcasterWallet();
+        console.log("[wallet] verified Farcaster Wallet:", res.address, "chainId:", res.chainId);
+        setFarcasterWalletAddress(res.address);
+        setChainId(res.chainId);
+      } catch (err) {
+        console.error("[wallet] verification failed:", err);
+        setError(err instanceof Error ? err.message : 'Wallet verification failed');
         return;
       }
 
       setUsername("Farcaster User")
-      setAddress(verified.address)
+      setAddress(res.address)
       setIsConnected(true)
     } catch (e: any) {
       console.error("Connection error:", e)

@@ -28,6 +28,10 @@ function App() {
     new Date().toISOString()
   )
 
+  // Diagnostic logs
+  console.log("[diag] VITE_DISABLE_EVM_SCAN:", import.meta.env?.VITE_DISABLE_EVM_SCAN);
+  console.log("[diag] location.host:", window.location.host);
+
   // Call ready() when the interface is ready to be displayed
   // This follows the official Farcaster getting started guide
   useEffect(() => {
