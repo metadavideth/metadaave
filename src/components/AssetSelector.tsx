@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useTokensWithBalances } from "../hooks/useTokenBalances"
+import { useWallet } from "../contexts/WalletContext"
 import type { Token } from "../types"
 
 interface AssetSelectorProps {
@@ -11,7 +12,8 @@ interface AssetSelectorProps {
 
 export function AssetSelector({ selectedToken, onTokenSelect }: AssetSelectorProps) {
   const [localSelectedToken, setLocalSelectedToken] = useState<Token | null>(selectedToken || null)
-  const { tokens, isLoading, error, isConnected, isUsingFallbackData } = useTokensWithBalances()
+  const { farcasterWalletAddress, chainId } = useWallet()
+  const { tokens, isLoading, error, isConnected, isUsingFallbackData } = useTokensWithBalances(farcasterWalletAddress, chainId)
 
   // Update local selected token when prop changes
   useEffect(() => {

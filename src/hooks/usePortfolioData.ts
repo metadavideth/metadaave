@@ -23,6 +23,8 @@ const AAVE_POOL_ABI = [
 ] as const
 
 // Aave V3 Pool address on Base Sepolia
+// Note: This address may not be correct for Base Sepolia - Aave V3 may not be fully deployed on Base Sepolia
+// For now, we'll handle the case where the contract doesn't exist or user has no positions
 const AAVE_POOL_ADDRESS = '0x6Ae43d3271ff6888e7Fc43Fd7321a503ff738951' // Base Sepolia Aave V3 Pool
 
 // Create public client for Base Sepolia
@@ -100,7 +102,18 @@ async function fetchPortfolioData(address: `0x${string}`): Promise<PortfolioData
   } catch (error) {
     console.error('[portfolio] Error fetching portfolio data:', error)
     
-    // Return zero values if user has no Aave positions
+    // Check if it's a contract error (contract doesn't exist or user has no positions)
+    const isContractError = error instanceof Error && (
+      error.message.includes('returned no data') ||
+      error.message.includes('ContractFunctionZeroDataError') ||
+      error.message.includes('not a contract')
+    )
+    
+    if (isContractError) {
+      console.log('[portfolio] User has no Aave positions or contract not available on Base Sepolia')
+    }
+    
+    // Return zero values if user has no Aave positions or contract not available
     return {
       totalSupplied: '0.00',
       totalBorrowed: '0.00',
