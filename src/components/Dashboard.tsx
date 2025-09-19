@@ -1,4 +1,9 @@
+import { useWallet } from "../contexts/WalletContext"
+import { useTokensWithBalances } from "../hooks/useTokenBalances"
+
 export function Dashboard() {
+  const { farcasterWalletAddress, chainId } = useWallet()
+  const { tokens, isLoading, error } = useTokensWithBalances(farcasterWalletAddress, chainId)
   // Mock data with realistic values
   const dashboardData = {
     totalSupplied: "8,450.32",

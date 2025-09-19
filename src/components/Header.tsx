@@ -4,6 +4,9 @@ import { useEffect, useState } from "react"
 import { initMiniAppAuth, isFarcasterEnvironment, mockFarcasterUser } from "../utils/farcaster"
 import { makeSiweNonce } from "../utils/auth"
 import { sdk as farcasterSDK } from "@farcaster/miniapp-sdk"
+import { getFarcasterProvider } from "../lib/farcasterProvider"
+import { recoverMessageAddress } from "viem"
+import { useWallet } from "../contexts/WalletContext"
 
 function shortenAddress(address?: string) {
   if (!address) return ""
@@ -19,6 +22,7 @@ export function Header() {
   const [debugInfo, setDebugInfo] = useState<any>(null)
   const [showDebug, setShowDebug] = useState(false)
   const [isAuthenticating, setIsAuthenticating] = useState(false)
+  const { farcasterWalletAddress, chainId, setFarcasterWalletAddress, setChainId } = useWallet()
 
   useEffect(() => {
     let mounted = true
@@ -115,20 +119,24 @@ export function Header() {
       await farcasterSDK.actions.ready();
       console.log('[auth] ready:ok');
 
-
       // If sdk.quickAuth.token exists, skip signIn and set authed=true
       const pre = farcasterSDK.quickAuth.token;
       console.log('[auth] preexisting token', pre);
 
       let token = pre;
+      let siweSignerAddress: string | undefined;
+      
       if (!token) {
         // Generate and validate nonce
         const nonce = makeSiweNonce(16)
         console.log('[auth] nonce (local):', nonce, 'alnum?', /^[a-z0-9]+$/i.test(nonce))
         
         // Call sdk.actions.signIn({ nonce }) unconditionally when user clicks Connect
-        const res = await farcasterSDK.actions.signIn({ nonce })
-        console.log('[auth] signIn result', res);
+        const result = await farcasterSDK.actions.signIn({ nonce })
+        console.log('[auth] signIn full result:', JSON.parse(JSON.stringify(result)));
+        
+        // Extract SIWE signer address from result
+        siweSignerAddress = (result?.address ?? result?.siwe?.address ?? result?.message?.address ?? '').toLowerCase() || undefined;
         
         // Immediately call await sdk.quickAuth.getToken() and treat a truthy token as authenticated
         const got = await farcasterSDK.quickAuth.getToken().catch(() => undefined);
@@ -136,13 +144,54 @@ export function Header() {
         console.log('[auth] token after signIn', token);
       }
 
-      if (token) {
-        setUsername("Farcaster User")
-        setAddress("0x" + token.slice(0, 40)) // Use token as address placeholder
-        setIsConnected(true)
-      } else {
+      if (!token) {
         setError("Please connect your Farcaster wallet")
+        return
       }
+
+      // Get the Farcaster Wallet provider
+      const provider = await getFarcasterProvider();
+      if (!provider) {
+        throw new Error('Farcaster Wallet provider not found');
+      }
+
+      // Get accounts from provider
+      let accounts: string[] = await provider.request({ method: 'eth_accounts' });
+      if (!accounts?.length) {
+        accounts = await provider.request({ method: 'eth_requestAccounts' });
+      }
+      const providerAddress = accounts?.[0]?.toLowerCase();
+      console.log('[wallet] provider address:', providerAddress);
+
+      if (!providerAddress) {
+        throw new Error('No wallet address found');
+      }
+
+      // Get chain ID
+      const chainId = await provider.request({ method: 'eth_chainId' });
+      setChainId(chainId);
+      console.log('[wallet] chain ID:', chainId);
+
+      // Cryptographic verification
+      const verifyMsg = 'miniapp:verify';
+      const sig = await provider.request({
+        method: 'personal_sign',
+        params: [verifyMsg, providerAddress],
+      });
+      const recovered = (await recoverMessageAddress({ message: verifyMsg, signature: sig })).toLowerCase();
+
+      if (recovered !== providerAddress) {
+        throw new Error('Wallet mismatch: recovered address does not match provider address (not Farcaster Wallet).');
+      }
+      if (siweSignerAddress && siweSignerAddress !== providerAddress) {
+        throw new Error(`Wallet mismatch: SIWE signer ${siweSignerAddress} != provider ${providerAddress}.`);
+      }
+
+      console.log('[wallet] verified Farcaster Wallet:', providerAddress);
+      setFarcasterWalletAddress(providerAddress);
+      setUsername("Farcaster User")
+      setAddress(providerAddress)
+      setIsConnected(true)
     } catch (e: any) {
       console.error("Connection error:", e)
       setError(e?.message ?? "Failed to authenticate with Farcaster")
@@ -156,6 +205,8 @@ export function Header() {
     setUsername("")
     setAddress("")
     setIsConnected(false)
+    setFarcasterWalletAddress(undefined)
+    setChainId(undefined)
   }
 
   if (isLoading) {
@@ -194,6 +245,23 @@ export function Header() {
                   <div className="font-medium text-card-foreground">@{username}</div>
                   <div className="text-xs text-muted-foreground">{shortenAddress(address)}</div>
                 </div>
+                {farcasterWalletAddress && (
+                  <div className="flex items-center gap-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-2 py-1 rounded-full text-xs">
+                    <span>Connected: Farcaster Wallet</span>
+                    <button
+                      onClick={() => navigator.clipboard.writeText(farcasterWalletAddress)}
+                      className="hover:bg-green-200 dark:hover:bg-green-800 rounded px-1"
+                      title="Copy address"
+                    >
+                      📋
+                    </button>
+                  </div>
+                )}
+                {chainId && (
+                  <div className="text-xs text-muted-foreground">
+                    {chainId === '0x2105' ? 'Base' : `Chain ${parseInt(chainId, 16)}`}
+                  </div>
+                )}
               </div>
               <button
                 onClick={handleDisconnect}

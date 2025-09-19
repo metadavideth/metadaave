@@ -53,21 +53,30 @@ async function fetchTokenBalance(
 }
 
 // Fetch all token balances for a user using Farcaster wallet
-async function fetchAllTokenBalances(): Promise<Record<string, string>> {
+async function fetchAllTokenBalances(farcasterWalletAddress: `0x${string}`, chainId?: string): Promise<Record<string, string>> {
   try {
-    // Get the authenticated Farcaster wallet address
-    const userAddress = await getAuthenticatedAddress()
-    
-    if (!userAddress) {
-      console.warn('No authenticated Farcaster address found')
+    if (!farcasterWalletAddress) {
+      console.warn('No Farcaster wallet address provided')
       return {}
     }
 
-    console.log('Fetching token balances for Farcaster wallet:', userAddress)
+    // Only fetch balances for Base chain (0x2105)
+    if (chainId && chainId !== '0x2105') {
+      console.log('Skipping balance fetch for non-Base chain:', chainId)
+      return {}
+    }
+
+    console.log('Fetching token balances for Farcaster wallet:', farcasterWalletAddress)
 
     const balancePromises = AAVE_V3_BASE_TOKENS.map(async (token) => {
-      const balance = await fetchTokenBalance(token.address, userAddress, token.decimals || 18)
-      return { address: token.address, balance }
+      try {
+        const balance = await fetchTokenBalance(token.address, farcasterWalletAddress, token.decimals || 18)
+        return { address: token.address, balance }
+      } catch (error) {
+        // Skip tokens that fail (e.g., ContractFunctionZeroDataError)
+        console.log(`Skipping token ${token.symbol} due to error:`, error)
+        return { address: token.address, balance: '0' }
+      }
     })
 
     const results = await Promise.all(balancePromises)
@@ -83,15 +92,15 @@ async function fetchAllTokenBalances(): Promise<Record<string, string>> {
 }
 
 // Hook to get user token balances using Farcaster wallet
-export function useTokenBalances(farcasterWalletAddress?: `0x${string}`) {
+export function useTokenBalances(farcasterWalletAddress?: `0x${string}`, chainId?: string) {
   // Early-out when not connected
   if (!farcasterWalletAddress) {
     return { data: [], isLoading: false, error: null }
   }
 
   return useQuery({
-    queryKey: ['token-balances', 'farcaster', farcasterWalletAddress],
-    queryFn: fetchAllTokenBalances,
+    queryKey: ['token-balances', 'farcaster', farcasterWalletAddress, chainId],
+    queryFn: () => fetchAllTokenBalances(farcasterWalletAddress, chainId),
     staleTime: 10000, // 10 seconds
     refetchInterval: 30000, // Refetch every 30 seconds
     retry: 2,
@@ -99,9 +108,9 @@ export function useTokenBalances(farcasterWalletAddress?: `0x${string}`) {
 }
 
 // Hook to get enriched tokens with user balances
-export function useTokensWithBalances(farcasterWalletAddress?: `0x${string}`) {
+export function useTokensWithBalances(farcasterWalletAddress?: `0x${string}`, chainId?: string) {
   const { tokens, isLoading: aaveLoading, error: aaveError, isUsingFallbackData } = useEnrichedTokens()
-  const { data: balances, isLoading: balanceLoading, error: balanceError } = useTokenBalances(farcasterWalletAddress)
+  const { data: balances, isLoading: balanceLoading, error: balanceError } = useTokenBalances(farcasterWalletAddress, chainId)
 
   const enrichedTokens: Token[] = tokens.map(token => {
     const userBalance = balances?.[token.address.toLowerCase()] || '0'

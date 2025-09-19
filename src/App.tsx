@@ -10,6 +10,7 @@ import { SocialModal } from "./components/SocialModal"
 import { SecurityDisclaimer } from "./components/SecurityDisclaimer"
 import { AAVE_V3_BASE_TOKENS } from "./data/tokens"
 import type { Token } from "./types"
+import { WalletProvider } from "./contexts/WalletContext"
 
 function App() {
   const [showSocialModal, setShowSocialModal] = useState(false)
@@ -54,28 +55,30 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <div className="max-w-md mx-auto min-h-screen flex flex-col">
-        <Header />
+    <WalletProvider>
+      <div className="min-h-screen bg-background text-foreground">
+        <div className="max-w-md mx-auto min-h-screen flex flex-col">
+          <Header />
 
-        <main className="flex-1 p-4 space-y-6">
-          <AssetSelector selectedToken={selectedToken} onTokenSelect={handleTokenSelect} />
-          <ActionTabs onTransactionSuccess={handleTransactionSuccess} selectedToken={selectedToken} />
-          <Dashboard />
-          <SecurityDisclaimer />
-        </main>
+          <main className="flex-1 p-4 space-y-6">
+            <AssetSelector selectedToken={selectedToken} onTokenSelect={handleTokenSelect} />
+            <ActionTabs onTransactionSuccess={handleTransactionSuccess} selectedToken={selectedToken} />
+            <Dashboard />
+            <SecurityDisclaimer />
+          </main>
+        </div>
+
+        {showSocialModal && socialModalData && (
+          <SocialModal
+            isOpen={showSocialModal}
+            onClose={() => setShowSocialModal(false)}
+            action={socialModalData.action}
+            amount={socialModalData.amount}
+            token={socialModalData.token}
+          />
+        )}
       </div>
-
-      {showSocialModal && socialModalData && (
-        <SocialModal
-          isOpen={showSocialModal}
-          onClose={() => setShowSocialModal(false)}
-          action={socialModalData.action}
-          amount={socialModalData.amount}
-          token={socialModalData.token}
-        />
-      )}
-    </div>
+    </WalletProvider>
   )
 }
 
