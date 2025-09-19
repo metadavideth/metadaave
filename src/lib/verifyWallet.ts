@@ -17,32 +17,85 @@ async function withTimeout<T>(p: Promise<T>, ms: number, label = "op"): Promise<
   }
 }
 
-// Grab the Farcaster embedded provider (same one Wallet uses)
-async function getFarcasterProvider(): Promise<any> {
-  // Window-injected provider for wallet.farcaster.xyz
-  // Prefer existing global if app set it elsewhere.
-  // @ts-ignore
-  const provider = window?.ethereum || (window as any)?.farcaster?.walletProvider || (window as any)?.walletProvider;
-  return provider ?? null;
+type Eip1193 = {
+  request: (args: { method: string; params?: any[] | object }) => Promise<any>;
+  // Some libs tag their providers:
+  isWarpcastEmbedded?: boolean;
+  isFarcasterEmbedded?: boolean;
+  isPrivyEmbedded?: boolean;
+  providerName?: string;
+};
+
+function looksLikeExtension(eth: any) {
+  // Common extension fingerprints
+  return !!(eth?.isMetaMask || eth?.isPhantom || eth?.isCoinbaseWallet || eth?.isBraveWallet);
+}
+
+async function getFarcasterProvider(): Promise<Eip1193> {
+  const w = window as any;
+
+  // Candidates that are known to be injected by Warpcast/Privy inside Mini Apps
+  const candidates: Eip1193[] = [
+    w?.farcaster?.walletProvider,
+    w?.walletProvider,             // some builds alias to this
+    w?.warpcast?.walletProvider,   // older/alt tag
+    w?.Privy?.getEmbeddedWalletProvider?.(), // Privy helper if present
+    w?.privy?.provider,            // alt Privy shape
+  ].filter(Boolean);
+
+  // Never fall back to window.ethereum — that invites extensions like Phantom/MetaMask.
+  const ext = (w as any).ethereum;
+  if (ext && looksLikeExtension(ext)) {
+    console.warn("[provider] Ignoring browser extension provider:", {
+      isMetaMask: !!ext.isMetaMask,
+      isPhantom: !!ext.isPhantom,
+      isCoinbaseWallet: !!ext.isCoinbaseWallet,
+      isBraveWallet: !!ext.isBraveWallet,
+    });
+  }
+
+  // Pick the first embedded candidate that actually responds to request()
+  for (const p of candidates) {
+    if (p && typeof p.request === "function") {
+      console.log("[provider] Selected embedded Farcaster provider", {
+        isWarpcastEmbedded: !!p.isWarpcastEmbedded,
+        isFarcasterEmbedded: !!p.isFarcasterEmbedded,
+        isPrivyEmbedded: !!p.isPrivyEmbedded,
+        providerName: (p as any).providerName,
+      });
+      return p;
+    }
+  }
+
+  throw new Error("Farcaster embedded wallet provider not found. Refusing to use browser extensions.");
 }
 
 export async function verifyFarcasterWallet() {
   const provider = await getFarcasterProvider();
   if (!provider) throw new Error("Farcaster Wallet provider not found");
 
+  const anyWinEth = (window as any).ethereum;
+  if (anyWinEth) {
+    if (anyWinEth === (provider as any)) {
+      // Extremely defensive: even if equal, refuse if it looks like an extension
+      if ((anyWinEth as any).isMetaMask || (anyWinEth as any).isPhantom || (anyWinEth as any).isCoinbaseWallet) {
+        throw new Error("Refusing to use browser extension provider for Mini App.");
+      }
+    }
+  }
+
   const chainIdHex: string = await provider.request({ method: "eth_chainId" });
   const chainIdDec = Number(chainIdHex); // signTypedData_v4 domain.chainId prefers a number
 
+  // DO NOT call eth_requestAccounts in Mini Apps; it may delegate to extensions.
+  // The embedded provider should expose the active account via eth_accounts.
   let accounts: string[] = await provider.request({ method: "eth_accounts" });
-  if (!accounts?.length) {
-    accounts = await withTimeout(
-      provider.request({ method: "eth_requestAccounts" }),
-      30_000,
-      "eth_requestAccounts"
-    );
-  }
   const addr = accounts?.[0];
-  if (!addr) throw new Error("No account from provider");
+  if (!addr) {
+    throw new Error("Embedded Farcaster wallet has no active account yet (eth_accounts empty).");
+  }
+
+  console.log("[wallet] using embedded provider only (no window.ethereum fallbacks)");
 
   // 1) Try personal_sign first
   try {

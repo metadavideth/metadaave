@@ -11,6 +11,7 @@ import { SecurityDisclaimer } from "./components/SecurityDisclaimer"
 import { AAVE_V3_BASE_TOKENS } from "./data/tokens"
 import type { Token } from "./types"
 import { WalletProvider } from "./contexts/WalletContext"
+import { tripwireAgainstExtensions } from "./lib/antiExtensionTripwire"
 
 function App() {
   const [showSocialModal, setShowSocialModal] = useState(false)
@@ -47,6 +48,11 @@ function App() {
     }
 
     callReady()
+  }, [])
+
+  // Tripwire against browser extensions
+  useEffect(() => {
+    tripwireAgainstExtensions();
   }, [])
 
   const handleTransactionSuccess = (action: string, amount: string, token: string) => {
