@@ -3,14 +3,14 @@ import ReactDOM from "react-dom/client"
 import App from "./App.tsx"
 import "./index.css"
 import { WagmiProvider, createConfig, http } from "wagmi"
-import { baseSepolia } from "wagmi/chains"
+import { base } from "wagmi/chains"
 import { farcasterMiniApp as miniAppConnector } from "@farcaster/miniapp-wagmi-connector"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 
 const config = createConfig({
-  chains: [baseSepolia],
+  chains: [base],
   transports: {
-    [baseSepolia.id]: http(),
+    [base.id]: http(),
   },
   connectors: [
     miniAppConnector()

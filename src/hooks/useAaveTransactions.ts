@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAccount } from 'wagmi'
 import { parseUnits, formatUnits } from 'viem'
 import { createWalletClient, createPublicClient, http, getContract } from 'viem'
-import { baseSepolia } from 'viem/chains'
+import { base } from 'viem/chains'
 import { getAuthenticatedAddress, getAuthToken, isFarcasterEnvironment, mockFarcasterUser } from '../utils/farcaster'
 import type { Token } from '../types'
 
@@ -142,7 +142,7 @@ async function getFarcasterWalletClient() {
 
     // In real Farcaster environment, create actual wallet client
     return createWalletClient({
-      chain: baseSepolia,
+      chain: base,
       transport: http(),
       account: address as `0x${string}`,
     })
@@ -155,7 +155,7 @@ async function getFarcasterWalletClient() {
 // Create a mock wallet client for development/previewer
 function createMockWalletClient(address: `0x${string}`) {
   return {
-    chain: baseSepolia,
+    chain: base,
     account: address,
     writeContract: async (params: any) => {
       // Simulate transaction delay
@@ -173,7 +173,7 @@ function createMockWalletClient(address: `0x${string}`) {
 
 // Create public client for reading
 const publicClient = createPublicClient({
-  chain: baseSepolia,
+  chain: base,
   transport: http(),
 })
 

@@ -13,10 +13,11 @@ const UI_POOL_DATA_PROVIDER_ADDRESS = '0x68100bD5345eA474D93577127C11F39FF8463e9
 // Token addresses on Base (matching frontend)
 const BASE_TOKEN_ADDRESSES = {
   USDC: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
-  ETH: '0x4200000000000000000000000000000000000006', // WETH
-  DAI: '0x50c5725949A6F0c72E6C4a641F24049A917DB0Cb',
-  USDT: '0x50c5725949A6F0c72E6C4a641F24049A917DB0Cb', // Using DAI as placeholder
-  WETH: '0x4200000000000000000000000000000000000006'
+  USDbC: '0xd9aAEc86B65D86f6A7B5B1b0c42FFA531710b6CA',
+  cbBTC: '0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf',
+  WETH: '0x4200000000000000000000000000000000000006',
+  cbETH: '0x2Ae3F1Ec7F1F5012CFEab0185bfc7aa3cf0DEc22',
+  EURC: '0x60a3E35Cc302bFA44Cb288Bc5a4F316Fdb1adb42'
 }
 
 interface ReserveData {
@@ -57,8 +58,42 @@ const MOCK_RESERVE_DATA: ReserveData[] = [
     isUsingFallbackData: true
   },
   {
-    id: BASE_TOKEN_ADDRESSES.ETH,
-    underlyingAsset: BASE_TOKEN_ADDRESSES.ETH,
+    id: BASE_TOKEN_ADDRESSES.USDbC,
+    underlyingAsset: BASE_TOKEN_ADDRESSES.USDbC,
+    symbol: 'USDbC',
+    name: 'USD Base Coin',
+    decimals: 6,
+    liquidityRate: '40000000000000000000000000', // ~4% APY in ray
+    variableBorrowRate: '60000000000000000000000000', // ~6% APY in ray
+    totalLiquidity: '1000000000000', // 1M USDbC
+    totalCurrentVariableDebt: '500000000000', // 500K USDbC
+    priceInEth: '0.0005',
+    priceInUsd: '1.00',
+    isActive: true,
+    supplyAPY: 4.0,
+    borrowAPY: 6.0,
+    isUsingFallbackData: true
+  },
+  {
+    id: BASE_TOKEN_ADDRESSES.cbBTC,
+    underlyingAsset: BASE_TOKEN_ADDRESSES.cbBTC,
+    symbol: 'cbBTC',
+    name: 'Coinbase Wrapped Bitcoin',
+    decimals: 8,
+    liquidityRate: '20000000000000000000000000', // ~2% APY in ray
+    variableBorrowRate: '40000000000000000000000000', // ~4% APY in ray
+    totalLiquidity: '100000000', // 1 BTC
+    totalCurrentVariableDebt: '50000000', // 0.5 BTC
+    priceInEth: '15.0',
+    priceInUsd: '30000.00',
+    isActive: true,
+    supplyAPY: 2.0,
+    borrowAPY: 4.0,
+    isUsingFallbackData: true
+  },
+  {
+    id: BASE_TOKEN_ADDRESSES.WETH,
+    underlyingAsset: BASE_TOKEN_ADDRESSES.WETH,
     symbol: 'WETH',
     name: 'Wrapped Ether',
     decimals: 18,
@@ -71,6 +106,40 @@ const MOCK_RESERVE_DATA: ReserveData[] = [
     isActive: true,
     supplyAPY: 3.0,
     borrowAPY: 5.0,
+    isUsingFallbackData: true
+  },
+  {
+    id: BASE_TOKEN_ADDRESSES.cbETH,
+    underlyingAsset: BASE_TOKEN_ADDRESSES.cbETH,
+    symbol: 'cbETH',
+    name: 'Coinbase Wrapped Staked ETH',
+    decimals: 18,
+    liquidityRate: '31000000000000000000000000', // ~3.1% APY in ray
+    variableBorrowRate: '51000000000000000000000000', // ~5.1% APY in ray
+    totalLiquidity: '1000000000000000000000', // 1000 cbETH
+    totalCurrentVariableDebt: '500000000000000000000', // 500 cbETH
+    priceInEth: '1.0',
+    priceInUsd: '2000.00',
+    isActive: true,
+    supplyAPY: 3.1,
+    borrowAPY: 5.1,
+    isUsingFallbackData: true
+  },
+  {
+    id: BASE_TOKEN_ADDRESSES.EURC,
+    underlyingAsset: BASE_TOKEN_ADDRESSES.EURC,
+    symbol: 'EURC',
+    name: 'Euro Coin',
+    decimals: 6,
+    liquidityRate: '20000000000000000000000000', // ~2% APY in ray
+    variableBorrowRate: '40000000000000000000000000', // ~4% APY in ray
+    totalLiquidity: '1000000000000', // 1M EURC
+    totalCurrentVariableDebt: '500000000000', // 500K EURC
+    priceInEth: '0.00045',
+    priceInUsd: '0.90',
+    isActive: true,
+    supplyAPY: 2.0,
+    borrowAPY: 4.0,
     isUsingFallbackData: true
   }
 ]

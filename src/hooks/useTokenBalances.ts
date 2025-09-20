@@ -1,16 +1,16 @@
 import { useQuery } from '@tanstack/react-query'
 import { useAccount } from 'wagmi'
 import { createPublicClient, http, formatUnits, erc20Abi } from 'viem'
-import { baseSepolia } from 'viem/chains'
+import { base } from 'viem/chains'
 import { AAVE_V3_BASE_TOKENS } from '../data/tokens'
 import { useEnrichedTokens } from './useAaveData'
 import { getAuthenticatedAddress } from '../utils/farcaster'
 import type { Token } from '../types'
 
-// Create a public client for Base Sepolia with reliable RPC
+// Create a public client for Base mainnet with reliable RPC
 const publicClient = createPublicClient({
-  chain: baseSepolia,
-  transport: http('https://sepolia.base.org')
+  chain: base,
+  transport: http('https://mainnet.base.org')
 })
 
 // ERC20 ABI for balance checking
@@ -54,7 +54,7 @@ async function fetchTokenBalance(
     console.warn(`[balance] Failed to fetch balance for token ${tokenAddress}:`, error)
     // Check if it's a "no data" error - this usually means the contract doesn't exist
     if (error.message?.includes('returned no data')) {
-      console.warn(`[balance] Contract ${tokenAddress} may not exist on Base Sepolia`)
+      console.warn(`[balance] Contract ${tokenAddress} may not exist on Base mainnet`)
     }
     return '0'
   }
@@ -68,9 +68,9 @@ async function fetchAllTokenBalances(farcasterWalletAddress: `0x${string}`, chai
       return {}
     }
 
-    // Only fetch balances for Base Sepolia chain (0x14a34 = 84532)
-    if (chainId && chainId !== '0x14a34') {
-      console.log('Skipping balance fetch for non-Base Sepolia chain:', chainId)
+    // Only fetch balances for Base mainnet chain (0x2105 = 8453)
+    if (chainId && chainId !== '0x2105') {
+      console.log('Skipping balance fetch for non-Base mainnet chain:', chainId)
       return {}
     }
 

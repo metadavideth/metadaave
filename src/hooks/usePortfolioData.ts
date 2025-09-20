@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useAccount } from 'wagmi'
 import { createPublicClient, http, formatUnits, parseUnits } from 'viem'
-import { baseSepolia } from 'viem/chains'
+import { base } from 'viem/chains'
 import { AAVE_V3_BASE_TOKENS } from '../data/tokens'
 
 // Aave V3 Pool ABI - minimal for user data
@@ -22,14 +22,12 @@ const AAVE_POOL_ABI = [
   }
 ] as const
 
-// Aave V3 Pool address on Base Sepolia
-// Note: This address may not be correct for Base Sepolia - Aave V3 may not be fully deployed on Base Sepolia
-// For now, we'll handle the case where the contract doesn't exist or user has no positions
-const AAVE_POOL_ADDRESS = '0x6Ae43d3271ff6888e7Fc43Fd7321a503ff738951' // Base Sepolia Aave V3 Pool
+// Aave V3 Pool address on Base mainnet
+const AAVE_POOL_ADDRESS = '0xA238Dd80C259a72e81d7e4664a9801593F98d1c5' // Base mainnet Aave V3 Pool
 
-// Create public client for Base Sepolia
+// Create public client for Base mainnet
 const publicClient = createPublicClient({
-  chain: baseSepolia,
+  chain: base,
   transport: http()
 })
 
