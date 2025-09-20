@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { AAVE_V3_BASE_TOKENS } from "../data/tokens"
 import { useAaveTransactions, calculateTransactionFee } from "../hooks/useAaveTransactions"
 import { useTokenPosition } from "../hooks/useUserPositions"
+import { useGasEstimate } from "../hooks/useGasEstimate"
 import type { Token } from "../types"
 
 interface ActionTabsProps {
@@ -22,6 +23,7 @@ export function ActionTabs({ onTransactionSuccess, selectedToken }: ActionTabsPr
 
   const { supply, borrow, repay, withdraw } = useAaveTransactions()
   const { position, isLoading: positionLoading } = useTokenPosition(currentToken.address)
+  const { data: gasEstimate, isLoading: gasLoading } = useGasEstimate()
 
   useEffect(() => {
     if (selectedToken) {
@@ -268,7 +270,9 @@ export function ActionTabs({ onTransactionSuccess, selectedToken }: ActionTabsPr
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Gas Fee:</span>
-                <span className="text-card-foreground">~$0.50</span>
+                <span className="text-card-foreground">
+                  {gasLoading ? '...' : `~$${gasEstimate?.gasPriceUSD || '0.10'}`}
+                </span>
               </div>
             </div>
           </div>
