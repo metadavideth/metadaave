@@ -85,8 +85,8 @@ async function fetchPortfolioData(address: `0x${string}`): Promise<PortfolioData
     console.log('[portfolio] healthFactor (raw):', healthFactor.toString())
     
     console.log('[portfolio] 🔍 After formatUnits conversion:')
-    console.log('[portfolio] totalSuppliedETH:', totalSuppliedETH)
-    console.log('[portfolio] totalBorrowedETH:', totalBorrowedETH)
+    console.log('[portfolio] totalSuppliedUSD:', totalSuppliedUSD)
+    console.log('[portfolio] totalBorrowedUSD:', totalBorrowedUSD)
     console.log('[portfolio] healthFactorNum:', healthFactorNum)
     console.log('[portfolio] ltvNum:', ltvNum)
     
