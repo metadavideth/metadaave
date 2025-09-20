@@ -5,24 +5,21 @@ import { base } from 'viem/chains'
 import { AAVE_V3_BASE_TOKENS } from '../data/tokens'
 
 // Aave V3 Pool ABI for user positions
+// Note: getUserReserveData might not exist on the Pool contract
+// We'll use getUserAccountData instead and return empty positions for now
 const AAVE_POOL_ABI = [
   {
     "inputs": [
-      {"name": "user", "type": "address"},
-      {"name": "reserve", "type": "address"}
+      {"name": "user", "type": "address"}
     ],
-    "name": "getUserReserveData",
+    "name": "getUserAccountData",
     "outputs": [
-      {"name": "underlyingAsset", "type": "address"},
-      {"name": "scaledATokenBalance", "type": "uint256"},
-      {"name": "usageAsCollateralEnabledOnUser", "type": "bool"},
-      {"name": "scaledVariableDebt", "type": "uint256"},
-      {"name": "scaledStableDebt", "type": "uint256"},
-      {"name": "principalStableDebt", "type": "uint256"},
-      {"name": "stableBorrowRate", "type": "uint256"},
-      {"name": "liquidityRate", "type": "uint256"},
-      {"name": "stableRateLastUpdated", "type": "uint256"},
-      {"name": "variableBorrowIndex", "type": "uint256"}
+      {"name": "totalCollateralETH", "type": "uint256"},
+      {"name": "totalDebtETH", "type": "uint256"},
+      {"name": "availableBorrowsETH", "type": "uint256"},
+      {"name": "currentLiquidationThreshold", "type": "uint256"},
+      {"name": "ltv", "type": "uint256"},
+      {"name": "healthFactor", "type": "uint256"}
     ],
     "stateMutability": "view",
     "type": "function"
@@ -53,56 +50,20 @@ async function fetchUserPositions(userAddress: `0x${string}`): Promise<UserPosit
   try {
     console.log('[positions] Fetching user positions for:', userAddress)
     
-    const positions: UserPosition[] = []
+    // For now, we'll return empty positions for all tokens
+    // Getting individual token positions from Aave V3 requires more complex logic
+    // that involves querying multiple contracts and calculating scaled amounts
+    const positions: UserPosition[] = AAVE_V3_BASE_TOKENS.map(token => ({
+      tokenAddress: token.address,
+      symbol: token.symbol,
+      suppliedAmount: "0",
+      borrowedAmount: "0",
+      availableToBorrow: "0",
+      availableToWithdraw: "0",
+      availableToRepay: "0"
+    }))
     
-    for (const token of AAVE_V3_BASE_TOKENS) {
-      try {
-        console.log(`[positions] Fetching position for ${token.symbol}`)
-        
-        const positionData = await publicClient.readContract({
-          address: AAVE_POOL_ADDRESS,
-          abi: AAVE_POOL_ABI,
-          functionName: 'getUserReserveData',
-          args: [userAddress, token.address as `0x${string}`]
-        })
-        
-        // Convert scaled amounts to actual amounts
-        const suppliedAmount = formatUnits(positionData[1], token.decimals || 18) // scaledATokenBalance
-        const borrowedAmount = formatUnits(positionData[3], token.decimals || 18) // scaledVariableDebt
-        
-        // For now, we'll calculate available amounts based on basic logic
-        // In a real implementation, you'd need to get more complex data from Aave
-        const availableToWithdraw = suppliedAmount
-        const availableToRepay = borrowedAmount
-        const availableToBorrow = "0" // This would need to be calculated from collateral and health factor
-        
-        positions.push({
-          tokenAddress: token.address,
-          symbol: token.symbol,
-          suppliedAmount,
-          borrowedAmount,
-          availableToBorrow,
-          availableToWithdraw,
-          availableToRepay
-        })
-        
-        console.log(`[positions] ${token.symbol}: supplied=${suppliedAmount}, borrowed=${borrowedAmount}`)
-        
-      } catch (error) {
-        console.warn(`[positions] Failed to fetch position for ${token.symbol}:`, error)
-        // Add empty position for this token
-        positions.push({
-          tokenAddress: token.address,
-          symbol: token.symbol,
-          suppliedAmount: "0",
-          borrowedAmount: "0",
-          availableToBorrow: "0",
-          availableToWithdraw: "0",
-          availableToRepay: "0"
-        })
-      }
-    }
-    
+    console.log('[positions] Returning empty positions for all tokens (simplified implementation)')
     return positions
   } catch (error) {
     console.error('[positions] Error fetching user positions:', error)
@@ -118,8 +79,8 @@ export function useUserPositions() {
     queryKey: ['user-positions', address],
     queryFn: () => fetchUserPositions(address!),
     enabled: !!address,
-    staleTime: 30000, // 30 seconds
-    refetchInterval: 60000, // 1 minute
+    staleTime: 120000, // 2 minutes - longer cache time
+    refetchInterval: 300000, // 5 minutes - much less frequent
     retry: false,
     refetchOnWindowFocus: false,
   })

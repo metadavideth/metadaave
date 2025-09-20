@@ -106,12 +106,12 @@ async function fetchAllTokenBalances(farcasterWalletAddress: `0x${string}`, chai
         }
       }
       
-      // Add delay between requests to avoid rate limiting (except for last token)
-      if (i < AAVE_V3_BASE_TOKENS.length - 1) {
-        // Longer delay after first few requests to reset rate limiter
-        const delayMs = i >= 3 ? 1000 : 500
-        await delay(delayMs)
-      }
+             // Add delay between requests to avoid rate limiting (except for last token)
+             if (i < AAVE_V3_BASE_TOKENS.length - 1) {
+               // Much longer delays to avoid rate limiting
+               const delayMs = i >= 2 ? 2000 : 1000
+               await delay(delayMs)
+             }
     }
     
     return results
@@ -135,8 +135,8 @@ export function useTokenBalances(farcasterWalletAddress?: `0x${string}`, chainId
       return fetchAllTokenBalances(farcasterWalletAddress!, chainId!)
     },
     enabled: !!farcasterWalletAddress && !!chainId,
-    staleTime: 60000, // 60 seconds - longer cache time
-    refetchInterval: 120000, // Refetch every 2 minutes - less frequent to avoid rate limits
+           staleTime: 120000, // 2 minutes - longer cache time
+           refetchInterval: 300000, // Refetch every 5 minutes - much less frequent to avoid rate limits
     retry: false, // Prevent retry loops
     refetchOnWindowFocus: false, // Prevent refetch on focus
   })
