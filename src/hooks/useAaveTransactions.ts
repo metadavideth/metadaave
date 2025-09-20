@@ -3,7 +3,6 @@ import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagm
 import { parseUnits, formatUnits } from 'viem'
 import { createPublicClient, http, getContract } from 'viem'
 import { base } from 'viem/chains'
-import { getAuthToken, isFarcasterEnvironment } from '../utils/farcaster'
 import type { Token } from '../types'
 
 // Aave V3 Pool ABI - minimal for core functions
@@ -224,7 +223,7 @@ async function executeAaveTransaction(params: TransactionParams, userAddress: st
 export function useAaveTransactions() {
   const queryClient = useQueryClient()
   const { address } = useAccount()
-  const { writeContract } = useWriteContract()
+  const { writeContract, data: hash, error, isPending } = useWriteContract()
 
   const supplyMutation = useMutation({
     mutationFn: async (params: Omit<TransactionParams, 'action'>) => {
@@ -236,30 +235,41 @@ export function useAaveTransactions() {
       const { token, amount } = params
       const amountWei = parseUnits(amount, token.decimals || 18)
       
-      // First approve the token
-      console.log('[transaction] Approving token...')
-      await writeContract({
-        address: token.address as `0x${string}`,
-        abi: ERC20_ABI,
-        functionName: 'approve',
-        args: [AAVE_V3_POOL_ADDRESS, BigInt('0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff')]
-      })
-      
-      // Then supply to Aave
-      console.log('[transaction] Supplying to Aave...')
-      await writeContract({
-        address: AAVE_V3_POOL_ADDRESS,
-        abi: AAVE_V3_POOL_ABI,
-        functionName: 'supply',
-        args: [token.address, amountWei, address, 0]
-      })
-      
-      return {
-        hash: `0x${Math.random().toString(16).substr(2, 64)}` as `0x${string}`,
-        action: 'supply',
-        amount,
-        token: token.symbol,
-        fee: calculateTransactionFee(amount)
+      try {
+        // First approve the token
+        console.log('[transaction] Approving token...')
+        const approveHash = await writeContract({
+          address: token.address as `0x${string}`,
+          abi: ERC20_ABI,
+          functionName: 'approve',
+          args: [AAVE_V3_POOL_ADDRESS, BigInt('0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff')]
+        })
+        console.log('[transaction] Approval hash:', approveHash)
+        
+        // Wait for approval to be mined
+        console.log('[transaction] Waiting for approval confirmation...')
+        await new Promise(resolve => setTimeout(resolve, 3000)) // Wait 3 seconds for approval
+        
+        // Then supply to Aave
+        console.log('[transaction] Supplying to Aave...')
+        const supplyHash = await writeContract({
+          address: AAVE_V3_POOL_ADDRESS,
+          abi: AAVE_V3_POOL_ABI,
+          functionName: 'supply',
+          args: [token.address, amountWei, address, 0]
+        })
+        console.log('[transaction] Supply hash:', supplyHash)
+        
+        return {
+          hash: supplyHash,
+          action: 'supply',
+          amount,
+          token: token.symbol,
+          fee: calculateTransactionFee(amount)
+        }
+      } catch (error) {
+        console.error('[transaction] Supply failed:', error)
+        throw error
       }
     },
     onSuccess: () => {
@@ -279,20 +289,26 @@ export function useAaveTransactions() {
       const { token, amount } = params
       const amountWei = parseUnits(amount, token.decimals || 18)
       
-      console.log('[transaction] Borrowing from Aave...')
-      await writeContract({
-        address: AAVE_V3_POOL_ADDRESS,
-        abi: AAVE_V3_POOL_ABI,
-        functionName: 'borrow',
-        args: [token.address, amountWei, 2, 0, address]
-      })
-      
-      return {
-        hash: `0x${Math.random().toString(16).substr(2, 64)}` as `0x${string}`,
-        action: 'borrow',
-        amount,
-        token: token.symbol,
-        fee: calculateTransactionFee(amount)
+      try {
+        console.log('[transaction] Borrowing from Aave...')
+        const borrowHash = await writeContract({
+          address: AAVE_V3_POOL_ADDRESS,
+          abi: AAVE_V3_POOL_ABI,
+          functionName: 'borrow',
+          args: [token.address, amountWei, 2, 0, address]
+        })
+        console.log('[transaction] Borrow hash:', borrowHash)
+        
+        return {
+          hash: borrowHash,
+          action: 'borrow',
+          amount,
+          token: token.symbol,
+          fee: calculateTransactionFee(amount)
+        }
+      } catch (error) {
+        console.error('[transaction] Borrow failed:', error)
+        throw error
       }
     },
     onSuccess: () => {
@@ -311,29 +327,40 @@ export function useAaveTransactions() {
       const { token, amount } = params
       const amountWei = parseUnits(amount, token.decimals || 18)
       
-      // First approve the token
-      console.log('[transaction] Approving token for repay...')
-      await writeContract({
-        address: token.address as `0x${string}`,
-        abi: ERC20_ABI,
-        functionName: 'approve',
-        args: [AAVE_V3_POOL_ADDRESS, BigInt('0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff')]
-      })
-      
-      console.log('[transaction] Repaying to Aave...')
-      await writeContract({
-        address: AAVE_V3_POOL_ADDRESS,
-        abi: AAVE_V3_POOL_ABI,
-        functionName: 'repay',
-        args: [token.address, amountWei, 2, address]
-      })
-      
-      return {
-        hash: `0x${Math.random().toString(16).substr(2, 64)}` as `0x${string}`,
-        action: 'repay',
-        amount,
-        token: token.symbol,
-        fee: calculateTransactionFee(amount)
+      try {
+        // First approve the token
+        console.log('[transaction] Approving token for repay...')
+        const approveHash = await writeContract({
+          address: token.address as `0x${string}`,
+          abi: ERC20_ABI,
+          functionName: 'approve',
+          args: [AAVE_V3_POOL_ADDRESS, BigInt('0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff')]
+        })
+        console.log('[transaction] Approval hash:', approveHash)
+        
+        // Wait for approval to be mined
+        console.log('[transaction] Waiting for approval confirmation...')
+        await new Promise(resolve => setTimeout(resolve, 3000)) // Wait 3 seconds for approval
+        
+        console.log('[transaction] Repaying to Aave...')
+        const repayHash = await writeContract({
+          address: AAVE_V3_POOL_ADDRESS,
+          abi: AAVE_V3_POOL_ABI,
+          functionName: 'repay',
+          args: [token.address, amountWei, 2, address]
+        })
+        console.log('[transaction] Repay hash:', repayHash)
+        
+        return {
+          hash: repayHash,
+          action: 'repay',
+          amount,
+          token: token.symbol,
+          fee: calculateTransactionFee(amount)
+        }
+      } catch (error) {
+        console.error('[transaction] Repay failed:', error)
+        throw error
       }
     },
     onSuccess: () => {
@@ -352,20 +379,26 @@ export function useAaveTransactions() {
       const { token, amount } = params
       const amountWei = parseUnits(amount, token.decimals || 18)
       
-      console.log('[transaction] Withdrawing from Aave...')
-      await writeContract({
-        address: AAVE_V3_POOL_ADDRESS,
-        abi: AAVE_V3_POOL_ABI,
-        functionName: 'withdraw',
-        args: [token.address, amountWei, address]
-      })
-      
-      return {
-        hash: `0x${Math.random().toString(16).substr(2, 64)}` as `0x${string}`,
-        action: 'withdraw',
-        amount,
-        token: token.symbol,
-        fee: calculateTransactionFee(amount)
+      try {
+        console.log('[transaction] Withdrawing from Aave...')
+        const withdrawHash = await writeContract({
+          address: AAVE_V3_POOL_ADDRESS,
+          abi: AAVE_V3_POOL_ABI,
+          functionName: 'withdraw',
+          args: [token.address, amountWei, address]
+        })
+        console.log('[transaction] Withdraw hash:', withdrawHash)
+        
+        return {
+          hash: withdrawHash,
+          action: 'withdraw',
+          amount,
+          token: token.symbol,
+          fee: calculateTransactionFee(amount)
+        }
+      } catch (error) {
+        console.error('[transaction] Withdraw failed:', error)
+        throw error
       }
     },
     onSuccess: () => {
