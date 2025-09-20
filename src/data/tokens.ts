@@ -57,4 +57,22 @@ export const AAVE_V3_BASE_TOKENS: Token[] = [
     address: "0x60a3E35Cc302bFA44Cb288Bc5a4F316Fdb1adb42", // Official EURC on Base mainnet
     decimals: 6,
   },
+  {
+    symbol: "tBTC",
+    name: "Threshold Bitcoin",
+    icon: "₿",
+    apy: "1.85%",
+    balance: "0",
+    address: "0x236aa50979D5f3De3Bd1Eeb40E81137F22ab794b", // Official tBTC on Base mainnet
+    decimals: 18,
+  },
+  {
+    symbol: "GHO",
+    name: "Aave GHO",
+    icon: "👻",
+    apy: "3.50%",
+    balance: "0",
+    address: "0x6Bb7a212910682DCFdbd5BCBb3e28FB4E8da10Ee", // Official GHO on Base mainnet
+    decimals: 18,
+  },
 ]

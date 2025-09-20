@@ -17,7 +17,9 @@ const BASE_TOKEN_ADDRESSES = {
   cbBTC: '0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf',
   WETH: '0x4200000000000000000000000000000000000006',
   cbETH: '0x2Ae3F1Ec7F1F5012CFEab0185bfc7aa3cf0DEc22',
-  EURC: '0x60a3E35Cc302bFA44Cb288Bc5a4F316Fdb1adb42'
+  EURC: '0x60a3E35Cc302bFA44Cb288Bc5a4F316Fdb1adb42',
+  tBTC: '0x236aa50979D5f3De3Bd1Eeb40E81137F22ab794b',
+  GHO: '0x6Bb7a212910682DCFdbd5BCBb3e28FB4E8da10Ee'
 }
 
 interface ReserveData {
@@ -140,6 +142,40 @@ const MOCK_RESERVE_DATA: ReserveData[] = [
     isActive: true,
     supplyAPY: 2.0,
     borrowAPY: 4.0,
+    isUsingFallbackData: true
+  },
+  {
+    id: BASE_TOKEN_ADDRESSES.tBTC,
+    underlyingAsset: BASE_TOKEN_ADDRESSES.tBTC,
+    symbol: 'tBTC',
+    name: 'Threshold Bitcoin',
+    decimals: 18,
+    liquidityRate: '18500000000000000000000000', // ~1.85% APY in ray
+    variableBorrowRate: '35000000000000000000000000', // ~3.5% APY in ray
+    totalLiquidity: '1000000000000000000000', // 1 tBTC
+    totalCurrentVariableDebt: '500000000000000000000', // 0.5 tBTC
+    priceInEth: '15.0',
+    priceInUsd: '30000.00',
+    isActive: true,
+    supplyAPY: 1.85,
+    borrowAPY: 3.5,
+    isUsingFallbackData: true
+  },
+  {
+    id: BASE_TOKEN_ADDRESSES.GHO,
+    underlyingAsset: BASE_TOKEN_ADDRESSES.GHO,
+    symbol: 'GHO',
+    name: 'Aave GHO',
+    decimals: 18,
+    liquidityRate: '35000000000000000000000000', // ~3.5% APY in ray
+    variableBorrowRate: '55000000000000000000000000', // ~5.5% APY in ray
+    totalLiquidity: '1000000000000000000000000', // 1M GHO
+    totalCurrentVariableDebt: '500000000000000000000000', // 500K GHO
+    priceInEth: '0.0005',
+    priceInUsd: '1.00',
+    isActive: true,
+    supplyAPY: 3.5,
+    borrowAPY: 5.5,
     isUsingFallbackData: true
   }
 ]
