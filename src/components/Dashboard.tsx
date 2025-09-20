@@ -42,16 +42,7 @@ export function Dashboard() {
 
   return (
     <div className="card">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-lg font-semibold text-card-foreground">Portfolio Overview</h2>
-        <button
-          onClick={handleRefresh}
-          disabled={isLoading}
-          className="px-3 py-1 text-xs bg-primary/10 hover:bg-primary/20 text-primary rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {isLoading ? 'Refreshing...' : 'Refresh'}
-        </button>
-      </div>
+      <h2 className="text-lg font-semibold mb-4 text-card-foreground">Portfolio Overview</h2>
 
       <div className="space-y-4">
         {/* Supply & Borrow Overview */}
