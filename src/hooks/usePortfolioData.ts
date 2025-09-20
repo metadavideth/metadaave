@@ -73,6 +73,15 @@ async function fetchPortfolioData(address: `0x${string}`): Promise<PortfolioData
     const healthFactorNum = parseFloat(formatUnits(healthFactor, 18))
     const ltvNum = parseFloat(formatUnits(ltv, 4)) // LTV is in basis points (10000 = 100%)
 
+    console.log('[portfolio] Parsed data:', {
+      totalCollateralETH: totalCollateralETH.toString(),
+      totalDebtETH: totalDebtETH.toString(),
+      totalSuppliedETH,
+      totalBorrowedETH,
+      healthFactorNum,
+      ltvNum
+    })
+
     // Handle health factor for no position case
     // Aave returns a very large number (2^256-1) when there are no positions
     const MAX_SAFE_HEALTH_FACTOR = 1e10 // 10 billion - anything larger is considered "infinite"
@@ -140,9 +149,9 @@ export function usePortfolioData() {
     queryKey: ['portfolio-data', address],
     queryFn: () => fetchPortfolioData(address!),
     enabled: !!address && isConnected,
-    staleTime: 30000, // 30 seconds
-    refetchInterval: 60000, // 1 minute
+    staleTime: 10000, // 10 seconds - shorter cache time
+    refetchInterval: 30000, // 30 seconds - more frequent refetch
     retry: false,
-    refetchOnWindowFocus: false,
+    refetchOnWindowFocus: true, // Refetch when window gains focus
   })
 }
