@@ -112,10 +112,13 @@ async function fetchAllTokenBalances(farcasterWalletAddress: `0x${string}`, chai
 export function useTokenBalances(farcasterWalletAddress?: `0x${string}`, chainId?: string) {
   return useQuery({
     queryKey: ['token-balances', 'farcaster', farcasterWalletAddress, chainId],
-    queryFn: () => fetchAllTokenBalances(farcasterWalletAddress!, chainId!),
+    queryFn: () => {
+      console.log('[balance-query] Fetching balances for:', farcasterWalletAddress)
+      return fetchAllTokenBalances(farcasterWalletAddress!, chainId!)
+    },
     enabled: !!farcasterWalletAddress && !!chainId,
-    staleTime: 10000, // 10 seconds
-    refetchInterval: 30000, // Refetch every 30 seconds
+    staleTime: 30000, // 30 seconds - same as Aave data
+    refetchInterval: 60000, // Refetch every 60 seconds - same as Aave data
     retry: false, // Prevent retry loops
     refetchOnWindowFocus: false, // Prevent refetch on focus
   })
@@ -127,10 +130,16 @@ export function useTokensWithBalances(farcasterWalletAddress?: `0x${string}`, ch
   const { data: balances, isLoading: balanceLoading, error: balanceError } = useTokenBalances(farcasterWalletAddress, chainId)
 
   const enrichedTokens: Token[] = tokens.map(token => {
+    // Use balance data if available, otherwise show 0
     const userBalance = balances?.[token.address.toLowerCase()] || '0'
     const userBalanceFormatted = userBalance === '0' 
       ? '0' 
       : parseFloat(userBalance).toFixed(7)
+
+    // Debug logging for balance changes
+    if (userBalance !== '0') {
+      console.log(`[balance-display] ${token.symbol}: ${userBalance} -> ${userBalanceFormatted}`)
+    }
 
     return {
       ...token,
