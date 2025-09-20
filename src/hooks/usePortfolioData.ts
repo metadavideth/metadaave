@@ -108,7 +108,7 @@ async function fetchPortfolioData(address: `0x${string}`): Promise<PortfolioData
     )
     
     if (isContractError) {
-      console.log('[portfolio] User has no Aave positions or contract not available on Base Sepolia')
+      console.log('[portfolio] User has no Aave positions or contract not available on Base')
     }
     
     // Return zero values if user has no Aave positions or contract not available

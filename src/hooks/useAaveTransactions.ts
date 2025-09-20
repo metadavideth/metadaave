@@ -82,7 +82,7 @@ const ERC20_ABI = [
   }
 ] as const
 
-// Aave V3 Pool address on Base Sepolia
+// Aave V3 Pool address on Base mainnet
 const AAVE_V3_POOL_ADDRESS = '0x6Ae43d3271ff6888e7Fc43Fd7321a503ff738951'
 
 // Transaction fee (0.1%)

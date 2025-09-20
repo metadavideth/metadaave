@@ -253,7 +253,7 @@ export function ActionTabs({ onTransactionSuccess, selectedToken }: ActionTabsPr
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Network:</span>
-              <span className="text-card-foreground">Base Sepolia</span>
+              <span className="text-card-foreground">Base</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Protocol:</span>
