@@ -3,7 +3,7 @@ import { useAccount } from 'wagmi'
 import { parseUnits, formatUnits } from 'viem'
 import { createWalletClient, createPublicClient, http, getContract } from 'viem'
 import { base } from 'viem/chains'
-import { getAuthenticatedAddress, getAuthToken, isFarcasterEnvironment, mockFarcasterUser } from '../utils/farcaster'
+import { getAuthToken, isFarcasterEnvironment, mockFarcasterUser } from '../utils/farcaster'
 import type { Token } from '../types'
 
 // Aave V3 Pool ABI - minimal for core functions
@@ -109,7 +109,7 @@ export function calculateTransactionFee(amount: string): string {
 }
 
 // Check if we're in a real environment with actual wallet
-async function isRealFarcasterEnvironment() {
+async function isRealFarcasterEnvironment(address?: string) {
   try {
     // Check for Farcaster authentication token
     const token = await getAuthToken()
@@ -120,7 +120,6 @@ async function isRealFarcasterEnvironment() {
     
     // Also check if we have a connected wallet via Wagmi
     // This allows the app to work in web browsers with wallet connections
-    const address = await getAuthenticatedAddress()
     if (address) {
       console.log('[env] Real environment detected (has connected wallet):', address)
       return true
@@ -135,17 +134,14 @@ async function isRealFarcasterEnvironment() {
 }
 
 // Get Farcaster wallet client with proper error handling
-async function getFarcasterWalletClient() {
+async function getFarcasterWalletClient(address: string) {
   try {
-    // Get the authenticated address
-    const address = await getAuthenticatedAddress()
-    
     if (!address) {
       throw new Error('No authenticated address found')
     }
 
     // Check if we're in a real Farcaster environment
-    const isRealEnv = await isRealFarcasterEnvironment()
+    const isRealEnv = await isRealFarcasterEnvironment(address)
     
     if (!isRealEnv) {
       // In previewer/development, return a mock client that simulates transactions
@@ -190,16 +186,15 @@ const publicClient = createPublicClient({
 })
 
 // Execute Aave V3 transaction
-async function executeAaveTransaction(params: TransactionParams): Promise<TransactionResult> {
+async function executeAaveTransaction(params: TransactionParams, userAddress: string): Promise<TransactionResult> {
   const { token, amount, action } = params
   
   try {
     // Check if we're in a real Farcaster environment
-    const isRealEnv = await isRealFarcasterEnvironment()
+    const isRealEnv = await isRealFarcasterEnvironment(userAddress)
     
     // Get Farcaster wallet client
-    const walletClient = await getFarcasterWalletClient()
-    const userAddress = await getAuthenticatedAddress()
+    const walletClient = await getFarcasterWalletClient(userAddress)
     
     if (!userAddress) {
       throw new Error('No authenticated address found')
@@ -323,7 +318,7 @@ async function ensureTokenApproval(
     }
   } catch (error) {
     // In mock environment, approval might fail, but that's okay
-    const isRealEnv = await isRealFarcasterEnvironment()
+    const isRealEnv = await isRealFarcasterEnvironment(userAddress)
     if (!isRealEnv) {
       console.log(`[MOCK] Token approval simulation for ${tokenAddress}`)
       return // Skip approval in mock environment
@@ -339,7 +334,7 @@ export function useAaveTransactions() {
 
   const supplyMutation = useMutation({
     mutationFn: (params: Omit<TransactionParams, 'action'>) => 
-      executeAaveTransaction({ ...params, action: 'supply' }),
+      executeAaveTransaction({ ...params, action: 'supply' }, address!),
     onSuccess: () => {
       // Invalidate relevant queries to refresh data
       queryClient.invalidateQueries({ queryKey: ['aave-data'] })
@@ -349,7 +344,7 @@ export function useAaveTransactions() {
 
   const borrowMutation = useMutation({
     mutationFn: (params: Omit<TransactionParams, 'action'>) => 
-      executeAaveTransaction({ ...params, action: 'borrow' }),
+      executeAaveTransaction({ ...params, action: 'borrow' }, address!),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['aave-data'] })
       queryClient.invalidateQueries({ queryKey: ['token-balances'] })
@@ -358,7 +353,7 @@ export function useAaveTransactions() {
 
   const repayMutation = useMutation({
     mutationFn: (params: Omit<TransactionParams, 'action'>) => 
-      executeAaveTransaction({ ...params, action: 'repay' }),
+      executeAaveTransaction({ ...params, action: 'repay' }, address!),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['aave-data'] })
       queryClient.invalidateQueries({ queryKey: ['token-balances'] })
@@ -367,7 +362,7 @@ export function useAaveTransactions() {
 
   const withdrawMutation = useMutation({
     mutationFn: (params: Omit<TransactionParams, 'action'>) => 
-      executeAaveTransaction({ ...params, action: 'withdraw' }),
+      executeAaveTransaction({ ...params, action: 'withdraw' }, address!),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['aave-data'] })
       queryClient.invalidateQueries({ queryKey: ['token-balances'] })

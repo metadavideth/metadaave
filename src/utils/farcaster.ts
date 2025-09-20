@@ -240,8 +240,28 @@ export async function getFarcasterUserData() {
 
 // Get authenticated address for transactions
 export async function getAuthenticatedAddress(): Promise<string> {
-  const userData = await getFarcasterUserData()
-  return userData.address
+  try {
+    // First try to get Farcaster user data
+    const userData = await getFarcasterUserData()
+    if (userData?.address) {
+      return userData.address
+    }
+    
+    // If no Farcaster data, try to get from Wagmi context
+    // This is a fallback for when the app is running in web browser with Wagmi
+    if (typeof window !== 'undefined' && (window as any).wagmi) {
+      // Try to get address from Wagmi's global state
+      const wagmiState = (window as any).wagmi?.getState?.()
+      if (wagmiState?.address) {
+        return wagmiState.address
+      }
+    }
+    
+    throw new Error('No authenticated address found')
+  } catch (error) {
+    console.warn('Error getting authenticated address:', error)
+    throw new Error('No authenticated address found')
+  }
 }
 
 // Make authenticated requests using Quick Auth
