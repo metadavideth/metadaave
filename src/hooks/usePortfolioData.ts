@@ -79,6 +79,31 @@ async function fetchPortfolioData(address: `0x${string}`): Promise<PortfolioData
     console.log('[portfolio] healthFactorNum:', healthFactorNum)
     console.log('[portfolio] ltvNum:', ltvNum)
     
+    // Check if user has any meaningful Aave positions
+    // If totalSuppliedETH is extremely small (< 0.001 ETH), user likely has no Aave positions
+    const hasAavePositions = totalSuppliedETH > 0.001 || totalBorrowedETH > 0.001
+    
+    console.log('[portfolio] 🔍 Position analysis:')
+    console.log('[portfolio] hasAavePositions:', hasAavePositions)
+    console.log('[portfolio] totalSuppliedETH > 0.001:', totalSuppliedETH > 0.001)
+    console.log('[portfolio] totalBorrowedETH > 0.001:', totalBorrowedETH > 0.001)
+    
+    if (!hasAavePositions) {
+      console.log('[portfolio] ❌ User has no meaningful Aave positions - returning zero values')
+      return {
+        totalSupplied: '0.00',
+        totalBorrowed: '0.00',
+        healthFactor: 0,
+        netAPY: '0.00%',
+        yieldEstimate: '0.00',
+        utilization: 0,
+        ltv: 0,
+        positions: 0,
+        isLoading: false,
+        error: null
+      }
+    }
+    
     // Convert ETH values to USD (using current ETH price)
     // Aave returns collateral values in ETH terms, but they're actually USD values
     const ETH_TO_USD = 2000 // Current ETH price
