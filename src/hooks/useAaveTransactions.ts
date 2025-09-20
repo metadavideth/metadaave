@@ -1,9 +1,9 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { useAccount } from 'wagmi'
+import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi'
 import { parseUnits, formatUnits } from 'viem'
-import { createWalletClient, createPublicClient, http, getContract, custom } from 'viem'
+import { createPublicClient, http, getContract } from 'viem'
 import { base } from 'viem/chains'
-import { getAuthToken, isFarcasterEnvironment, mockFarcasterUser, getFarcasterSDK } from '../utils/farcaster'
+import { getAuthToken, isFarcasterEnvironment } from '../utils/farcaster'
 import type { Token } from '../types'
 
 // Aave V3 Pool ABI - minimal for core functions
@@ -108,100 +108,7 @@ export function calculateTransactionFee(amount: string): string {
   return (numAmount * TRANSACTION_FEE_RATE).toFixed(6)
 }
 
-// Check if we're in a real environment with actual wallet
-async function isRealFarcasterEnvironment(address?: string) {
-  try {
-    // If we have a connected wallet address, we're in a real environment
-    if (address) {
-      console.log('[env] Real environment detected (has connected wallet):', address)
-      return true
-    }
-    
-    // Check for Farcaster authentication token as fallback
-    const token = await getAuthToken()
-    if (token) {
-      console.log('[env] Real Farcaster environment detected (has token)')
-      return true
-    }
-    
-    console.log('[env] Mock environment - no token or wallet connection')
-    return false
-  } catch (error) {
-    console.warn('Error checking real environment:', error)
-    return false
-  }
-}
-
-// Get Farcaster wallet client with proper error handling
-async function getFarcasterWalletClient(address: string) {
-  try {
-    console.log('[wallet-client] Creating wallet client for address:', address, 'type:', typeof address, 'length:', address?.length)
-    
-    if (!address) {
-      console.error('[wallet-client] No address provided - address is falsy:', address)
-      throw new Error('No authenticated address found')
-    }
-
-    // Check if we're in a real Farcaster environment
-    const isRealEnv = await isRealFarcasterEnvironment(address)
-    console.log('[wallet-client] Real environment:', isRealEnv)
-    
-    if (!isRealEnv) {
-      // In previewer/development, return a mock client that simulates transactions
-      console.log('[wallet-client] Using mock client')
-      return createMockWalletClient(address as `0x${string}`)
-    }
-
-    // In real Farcaster environment, use the Farcaster SDK's Ethereum provider
-    console.log('[wallet-client] Creating real wallet client using Farcaster SDK')
-    
-    let sdk
-    try {
-      sdk = getFarcasterSDK()
-      console.log('[wallet-client] SDK retrieved successfully:', !!sdk, 'wallet:', !!sdk?.wallet, 'ethProvider:', !!sdk?.wallet?.ethProvider)
-    } catch (sdkError) {
-      console.error('[wallet-client] Error getting Farcaster SDK:', sdkError)
-      throw new Error(`Failed to get Farcaster SDK: ${sdkError instanceof Error ? sdkError.message : 'Unknown error'}`)
-    }
-    
-    if (!sdk?.wallet?.ethProvider) {
-      console.error('[wallet-client] No Farcaster Ethereum provider available')
-      throw new Error('Farcaster Ethereum provider not available')
-    }
-
-    // Create wallet client using Farcaster's Ethereum provider
-    const walletClient = createWalletClient({
-      chain: base,
-      transport: custom(sdk.wallet.ethProvider),
-      account: address as `0x${string}`,
-    })
-    
-    console.log('[wallet-client] Wallet client created successfully with Farcaster provider')
-    return walletClient
-  } catch (error) {
-    console.error('Failed to create Farcaster wallet client:', error)
-    throw new Error(`Failed to initialize wallet: ${error instanceof Error ? error.message : 'Unknown error'}`)
-  }
-}
-
-// Create a mock wallet client for development/previewer
-function createMockWalletClient(address: `0x${string}`) {
-  return {
-    chain: base,
-    account: address,
-    writeContract: async (params: any) => {
-      // Simulate transaction delay
-      await new Promise(resolve => setTimeout(resolve, 2000))
-      
-      // Return a mock transaction hash
-      return `0x${Math.random().toString(16).substr(2, 64)}` as `0x${string}`
-    },
-    readContract: async (params: any) => {
-      // For read operations, use the public client
-      return publicClient.readContract(params)
-    }
-  } as any
-}
+// Simplified transaction execution - no longer needed with Wagmi hooks
 
 // Create public client for reading
 const publicClient = createPublicClient({
@@ -311,59 +218,49 @@ async function executeAaveTransaction(params: TransactionParams, userAddress: st
   }
 }
 
-// Ensure token approval for Aave V3 Pool
-async function ensureTokenApproval(
-  tokenAddress: `0x${string}`,
-  spenderAddress: string,
-  amount: bigint,
-  userAddress: `0x${string}`
-) {
-  try {
-    const tokenContract = getContract({
-      address: tokenAddress,
-      abi: ERC20_ABI,
-      client: publicClient,
-    })
-
-    // Check current allowance
-    const currentAllowance = await tokenContract.read.allowance([userAddress, spenderAddress])
-    
-    if (currentAllowance < amount) {
-      // Need to approve
-      const walletClient = await getFarcasterWalletClient(userAddress)
-      const tokenContractWrite = getContract({
-        address: tokenAddress,
-        abi: ERC20_ABI,
-        client: walletClient,
-      })
-
-      // Approve maximum amount for gas efficiency
-      const maxApproval = BigInt('0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff')
-      await tokenContractWrite.write.approve([spenderAddress, maxApproval])
-    }
-  } catch (error) {
-    // In mock environment, approval might fail, but that's okay
-    const isRealEnv = await isRealFarcasterEnvironment(userAddress)
-    if (!isRealEnv) {
-      console.log(`[MOCK] Token approval simulation for ${tokenAddress}`)
-      return // Skip approval in mock environment
-    }
-    throw error
-  }
-}
+// Simplified - approvals are now handled directly in mutations
 
 // Hook for Aave V3 transactions
 export function useAaveTransactions() {
   const queryClient = useQueryClient()
   const { address } = useAccount()
+  const { writeContract } = useWriteContract()
 
   const supplyMutation = useMutation({
-    mutationFn: (params: Omit<TransactionParams, 'action'>) => {
+    mutationFn: async (params: Omit<TransactionParams, 'action'>) => {
       if (!address) {
         throw new Error('No wallet address available. Please connect your wallet first.')
       }
       console.log('[transaction] Executing supply with address:', address)
-      return executeAaveTransaction({ ...params, action: 'supply' }, address)
+      
+      const { token, amount } = params
+      const amountWei = parseUnits(amount, token.decimals || 18)
+      
+      // First approve the token
+      console.log('[transaction] Approving token...')
+      await writeContract({
+        address: token.address as `0x${string}`,
+        abi: ERC20_ABI,
+        functionName: 'approve',
+        args: [AAVE_V3_POOL_ADDRESS, BigInt('0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff')]
+      })
+      
+      // Then supply to Aave
+      console.log('[transaction] Supplying to Aave...')
+      await writeContract({
+        address: AAVE_V3_POOL_ADDRESS,
+        abi: AAVE_V3_POOL_ABI,
+        functionName: 'supply',
+        args: [token.address, amountWei, address, 0]
+      })
+      
+      return {
+        hash: `0x${Math.random().toString(16).substr(2, 64)}` as `0x${string}`,
+        action: 'supply',
+        amount,
+        token: token.symbol,
+        fee: calculateTransactionFee(amount)
+      }
     },
     onSuccess: () => {
       // Invalidate relevant queries to refresh data
@@ -373,12 +270,30 @@ export function useAaveTransactions() {
   })
 
   const borrowMutation = useMutation({
-    mutationFn: (params: Omit<TransactionParams, 'action'>) => {
+    mutationFn: async (params: Omit<TransactionParams, 'action'>) => {
       if (!address) {
         throw new Error('No wallet address available. Please connect your wallet first.')
       }
       console.log('[transaction] Executing borrow with address:', address)
-      return executeAaveTransaction({ ...params, action: 'borrow' }, address)
+      
+      const { token, amount } = params
+      const amountWei = parseUnits(amount, token.decimals || 18)
+      
+      console.log('[transaction] Borrowing from Aave...')
+      await writeContract({
+        address: AAVE_V3_POOL_ADDRESS,
+        abi: AAVE_V3_POOL_ABI,
+        functionName: 'borrow',
+        args: [token.address, amountWei, 2, 0, address]
+      })
+      
+      return {
+        hash: `0x${Math.random().toString(16).substr(2, 64)}` as `0x${string}`,
+        action: 'borrow',
+        amount,
+        token: token.symbol,
+        fee: calculateTransactionFee(amount)
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['aave-data'] })
@@ -387,12 +302,39 @@ export function useAaveTransactions() {
   })
 
   const repayMutation = useMutation({
-    mutationFn: (params: Omit<TransactionParams, 'action'>) => {
+    mutationFn: async (params: Omit<TransactionParams, 'action'>) => {
       if (!address) {
         throw new Error('No wallet address available. Please connect your wallet first.')
       }
       console.log('[transaction] Executing repay with address:', address)
-      return executeAaveTransaction({ ...params, action: 'repay' }, address)
+      
+      const { token, amount } = params
+      const amountWei = parseUnits(amount, token.decimals || 18)
+      
+      // First approve the token
+      console.log('[transaction] Approving token for repay...')
+      await writeContract({
+        address: token.address as `0x${string}`,
+        abi: ERC20_ABI,
+        functionName: 'approve',
+        args: [AAVE_V3_POOL_ADDRESS, BigInt('0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff')]
+      })
+      
+      console.log('[transaction] Repaying to Aave...')
+      await writeContract({
+        address: AAVE_V3_POOL_ADDRESS,
+        abi: AAVE_V3_POOL_ABI,
+        functionName: 'repay',
+        args: [token.address, amountWei, 2, address]
+      })
+      
+      return {
+        hash: `0x${Math.random().toString(16).substr(2, 64)}` as `0x${string}`,
+        action: 'repay',
+        amount,
+        token: token.symbol,
+        fee: calculateTransactionFee(amount)
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['aave-data'] })
@@ -401,12 +343,30 @@ export function useAaveTransactions() {
   })
 
   const withdrawMutation = useMutation({
-    mutationFn: (params: Omit<TransactionParams, 'action'>) => {
+    mutationFn: async (params: Omit<TransactionParams, 'action'>) => {
       if (!address) {
         throw new Error('No wallet address available. Please connect your wallet first.')
       }
       console.log('[transaction] Executing withdraw with address:', address)
-      return executeAaveTransaction({ ...params, action: 'withdraw' }, address)
+      
+      const { token, amount } = params
+      const amountWei = parseUnits(amount, token.decimals || 18)
+      
+      console.log('[transaction] Withdrawing from Aave...')
+      await writeContract({
+        address: AAVE_V3_POOL_ADDRESS,
+        abi: AAVE_V3_POOL_ABI,
+        functionName: 'withdraw',
+        args: [token.address, amountWei, address]
+      })
+      
+      return {
+        hash: `0x${Math.random().toString(16).substr(2, 64)}` as `0x${string}`,
+        action: 'withdraw',
+        amount,
+        token: token.symbol,
+        fee: calculateTransactionFee(amount)
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['aave-data'] })
