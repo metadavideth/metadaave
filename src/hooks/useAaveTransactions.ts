@@ -82,7 +82,7 @@ const ERC20_ABI = [
 ] as const
 
 // Aave V3 Pool address on Base mainnet
-const AAVE_V3_POOL_ADDRESS = '0x6Ae43d3271ff6888e7Fc43Fd7321a503ff738951'
+const AAVE_V3_POOL_ADDRESS = '0xA238Dd80C259a72e81d7e4664a9801593F98d1c5'
 
 // Transaction fee (0.1%)
 const TRANSACTION_FEE_RATE = 0.001
@@ -238,13 +238,23 @@ export function useAaveTransactions() {
       try {
         // Step 1: First approve the token
         console.log('[transaction] Step 1: Approving token...')
-        writeContract({
-          address: token.address as `0x${string}`,
-          abi: ERC20_ABI,
-          functionName: 'approve',
-          args: [AAVE_V3_POOL_ADDRESS, BigInt('0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff')]
-        })
-        console.log('[transaction] Approval transaction submitted - please approve in wallet')
+        console.log('[transaction] Token address:', token.address)
+        console.log('[transaction] Token symbol:', token.symbol)
+        console.log('[transaction] Amount to supply:', amount, 'wei:', amountWei.toString())
+        console.log('[transaction] Aave Pool address:', AAVE_V3_POOL_ADDRESS)
+        
+        try {
+          writeContract({
+            address: token.address as `0x${string}`,
+            abi: ERC20_ABI,
+            functionName: 'approve',
+            args: [AAVE_V3_POOL_ADDRESS, BigInt('0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff')]
+          })
+          console.log('[transaction] ✅ Approval transaction submitted - please approve in wallet')
+        } catch (error) {
+          console.error('[transaction] ❌ Approval transaction failed:', error)
+          throw error
+        }
         
         // Wait for user to approve
         console.log('[transaction] Waiting for approval confirmation...')
@@ -252,13 +262,20 @@ export function useAaveTransactions() {
         
         // Step 2: Then supply to Aave
         console.log('[transaction] Step 2: Supplying to Aave...')
-        writeContract({
-          address: AAVE_V3_POOL_ADDRESS,
-          abi: AAVE_V3_POOL_ABI,
-          functionName: 'supply',
-          args: [token.address, amountWei, address, 0]
-        })
-        console.log('[transaction] Supply transaction submitted - please approve in wallet')
+        console.log('[transaction] Supply args:', [token.address, amountWei.toString(), address, 0])
+        
+        try {
+          writeContract({
+            address: AAVE_V3_POOL_ADDRESS,
+            abi: AAVE_V3_POOL_ABI,
+            functionName: 'supply',
+            args: [token.address, amountWei, address, 0]
+          })
+          console.log('[transaction] ✅ Supply transaction submitted - please approve in wallet')
+        } catch (error) {
+          console.error('[transaction] ❌ Supply transaction failed:', error)
+          throw error
+        }
         
         // Return a mock hash for now since we can't get the real hash from writeContract
         const mockHash = `0x${Math.random().toString(16).substr(2, 64)}` as `0x${string}`
