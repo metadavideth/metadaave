@@ -129,28 +129,26 @@ async function fetchPortfolioData(address: `0x${string}`): Promise<PortfolioData
     // Handle health factor for no position case
     // Aave returns a very large number (2^256-1) when there are no positions
     const MAX_SAFE_HEALTH_FACTOR = 1e10 // 10 billion - anything larger is considered "infinite"
-    const isDustAmount = totalSuppliedUSD < 0.0001 // Less than 0.01 cent is considered dust (much more lenient)
     const isNoPosition = totalSuppliedUSD === 0 && totalBorrowedUSD === 0
     const isInfiniteHealthFactor = healthFactorNum > MAX_SAFE_HEALTH_FACTOR
-    const effectiveHealthFactor = (isNoPosition || isDustAmount || isInfiniteHealthFactor) ? 0 : healthFactorNum
+    const effectiveHealthFactor = (isNoPosition || isInfiniteHealthFactor) ? 0 : healthFactorNum
     
     console.log('[portfolio] 🔍 Health factor analysis:')
     console.log('[portfolio] isNoPosition:', isNoPosition)
-    console.log('[portfolio] isDustAmount:', isDustAmount)
     console.log('[portfolio] isInfiniteHealthFactor:', isInfiniteHealthFactor)
     console.log('[portfolio] effectiveHealthFactor:', effectiveHealthFactor)
 
     // Calculate utilization (borrowed / supplied) - only for meaningful amounts
-    const utilization = (totalSuppliedUSD > 0.0001 && totalBorrowedUSD > 0) ? (totalBorrowedUSD / totalSuppliedUSD) * 100 : 0
+    const utilization = (totalSuppliedUSD > 0 && totalBorrowedUSD > 0) ? (totalBorrowedUSD / totalSuppliedUSD) * 100 : 0
 
     // Calculate net APY (simplified - in real app you'd calculate based on actual positions)
-    const netAPY = totalSuppliedUSD > 0.0001 ? '2.85%' : '0.00%' // Placeholder
+    const netAPY = totalSuppliedUSD > 0 ? '2.85%' : '0.00%' // Placeholder
 
     // Calculate estimated monthly yield
-    const monthlyYield = totalSuppliedUSD > 0.0001 ? (totalSuppliedUSD * 0.0285 / 12) : 0
+    const monthlyYield = totalSuppliedUSD > 0 ? (totalSuppliedUSD * 0.0285 / 12) : 0
 
     // Count positions (simplified - count tokens with balance > 0)
-    const positions = totalSuppliedUSD > 0.0001 || totalBorrowedUSD > 0.0001 ? 1 : 0
+    const positions = totalSuppliedUSD > 0 || totalBorrowedUSD > 0 ? 1 : 0
 
     return {
       totalSupplied: totalSuppliedUSD.toFixed(2),
