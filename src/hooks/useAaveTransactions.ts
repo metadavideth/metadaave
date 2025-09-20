@@ -135,24 +135,32 @@ async function isRealFarcasterEnvironment(address?: string) {
 // Get Farcaster wallet client with proper error handling
 async function getFarcasterWalletClient(address: string) {
   try {
+    console.log('[wallet-client] Creating wallet client for address:', address)
+    
     if (!address) {
+      console.error('[wallet-client] No address provided')
       throw new Error('No authenticated address found')
     }
 
     // Check if we're in a real Farcaster environment
     const isRealEnv = await isRealFarcasterEnvironment(address)
+    console.log('[wallet-client] Real environment:', isRealEnv)
     
     if (!isRealEnv) {
       // In previewer/development, return a mock client that simulates transactions
+      console.log('[wallet-client] Using mock client')
       return createMockWalletClient(address as `0x${string}`)
     }
 
     // In real Farcaster environment, create actual wallet client
-    return createWalletClient({
+    console.log('[wallet-client] Creating real wallet client')
+    const walletClient = createWalletClient({
       chain: base,
       transport: http(),
       account: address as `0x${string}`,
     })
+    console.log('[wallet-client] Wallet client created successfully')
+    return walletClient
   } catch (error) {
     console.error('Failed to create Farcaster wallet client:', error)
     throw new Error(`Failed to initialize wallet: ${error instanceof Error ? error.message : 'Unknown error'}`)
