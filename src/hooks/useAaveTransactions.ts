@@ -111,17 +111,16 @@ export function calculateTransactionFee(amount: string): string {
 // Check if we're in a real environment with actual wallet
 async function isRealFarcasterEnvironment(address?: string) {
   try {
-    // Check for Farcaster authentication token
-    const token = await getAuthToken()
-    if (token) {
-      console.log('[env] Real Farcaster environment detected (has token)')
+    // If we have a connected wallet address, we're in a real environment
+    if (address) {
+      console.log('[env] Real environment detected (has connected wallet):', address)
       return true
     }
     
-    // Also check if we have a connected wallet via Wagmi
-    // This allows the app to work in web browsers with wallet connections
-    if (address) {
-      console.log('[env] Real environment detected (has connected wallet):', address)
+    // Check for Farcaster authentication token as fallback
+    const token = await getAuthToken()
+    if (token) {
+      console.log('[env] Real Farcaster environment detected (has token)')
       return true
     }
     
@@ -190,15 +189,15 @@ async function executeAaveTransaction(params: TransactionParams, userAddress: st
   const { token, amount, action } = params
   
   try {
+    if (!userAddress) {
+      throw new Error('No authenticated address found')
+    }
+    
     // Check if we're in a real Farcaster environment
     const isRealEnv = await isRealFarcasterEnvironment(userAddress)
     
     // Get Farcaster wallet client
     const walletClient = await getFarcasterWalletClient(userAddress)
-    
-    if (!userAddress) {
-      throw new Error('No authenticated address found')
-    }
 
     const tokenAddress = token.address as `0x${string}`
     const amountWei = parseUnits(amount, token.decimals || 18)
@@ -333,8 +332,13 @@ export function useAaveTransactions() {
   const { address } = useAccount()
 
   const supplyMutation = useMutation({
-    mutationFn: (params: Omit<TransactionParams, 'action'>) => 
-      executeAaveTransaction({ ...params, action: 'supply' }, address!),
+    mutationFn: (params: Omit<TransactionParams, 'action'>) => {
+      if (!address) {
+        throw new Error('No wallet address available. Please connect your wallet first.')
+      }
+      console.log('[transaction] Executing supply with address:', address)
+      return executeAaveTransaction({ ...params, action: 'supply' }, address)
+    },
     onSuccess: () => {
       // Invalidate relevant queries to refresh data
       queryClient.invalidateQueries({ queryKey: ['aave-data'] })
@@ -343,8 +347,13 @@ export function useAaveTransactions() {
   })
 
   const borrowMutation = useMutation({
-    mutationFn: (params: Omit<TransactionParams, 'action'>) => 
-      executeAaveTransaction({ ...params, action: 'borrow' }, address!),
+    mutationFn: (params: Omit<TransactionParams, 'action'>) => {
+      if (!address) {
+        throw new Error('No wallet address available. Please connect your wallet first.')
+      }
+      console.log('[transaction] Executing borrow with address:', address)
+      return executeAaveTransaction({ ...params, action: 'borrow' }, address)
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['aave-data'] })
       queryClient.invalidateQueries({ queryKey: ['token-balances'] })
@@ -352,8 +361,13 @@ export function useAaveTransactions() {
   })
 
   const repayMutation = useMutation({
-    mutationFn: (params: Omit<TransactionParams, 'action'>) => 
-      executeAaveTransaction({ ...params, action: 'repay' }, address!),
+    mutationFn: (params: Omit<TransactionParams, 'action'>) => {
+      if (!address) {
+        throw new Error('No wallet address available. Please connect your wallet first.')
+      }
+      console.log('[transaction] Executing repay with address:', address)
+      return executeAaveTransaction({ ...params, action: 'repay' }, address)
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['aave-data'] })
       queryClient.invalidateQueries({ queryKey: ['token-balances'] })
@@ -361,8 +375,13 @@ export function useAaveTransactions() {
   })
 
   const withdrawMutation = useMutation({
-    mutationFn: (params: Omit<TransactionParams, 'action'>) => 
-      executeAaveTransaction({ ...params, action: 'withdraw' }, address!),
+    mutationFn: (params: Omit<TransactionParams, 'action'>) => {
+      if (!address) {
+        throw new Error('No wallet address available. Please connect your wallet first.')
+      }
+      console.log('[transaction] Executing withdraw with address:', address)
+      return executeAaveTransaction({ ...params, action: 'withdraw' }, address)
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['aave-data'] })
       queryClient.invalidateQueries({ queryKey: ['token-balances'] })
