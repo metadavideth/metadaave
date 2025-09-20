@@ -91,6 +91,18 @@ async function fetchPortfolioData(address: `0x${string}`): Promise<PortfolioData
       ltv: userData[4]?.toString(),
       healthFactor: userData[5]?.toString()
     })
+    
+    // Check if userData is actually empty or if the function doesn't exist
+    if (!userData || userData.length === 0) {
+      console.error('[portfolio] ❌ userData is empty - wrong contract or function?')
+      throw new Error('getUserAccountData returned empty data - possible wrong contract')
+    }
+    
+    // Log each individual value to debug
+    console.log('[portfolio] 🔍 Debugging individual values:')
+    userData.forEach((value, index) => {
+      console.log(`[portfolio] userData[${index}]: ${value?.toString()} (type: ${typeof value})`)
+    })
 
     // Handle health factor for no position case
     // Aave returns a very large number (2^256-1) when there are no positions
