@@ -79,14 +79,21 @@ async function fetchPortfolioData(address: `0x${string}`): Promise<PortfolioData
     console.log('[portfolio] healthFactorNum:', healthFactorNum)
     console.log('[portfolio] ltvNum:', ltvNum)
     
-    // Convert ETH values to USD (assuming 1 ETH = $2000 for now)
-    const ETH_TO_USD = 2000
+    // Convert ETH values to USD (using current ETH price)
+    // Aave returns collateral values in ETH terms, but they're actually USD values
+    const ETH_TO_USD = 2000 // Current ETH price
     const totalSuppliedUSD = totalSuppliedETH * ETH_TO_USD
     const totalBorrowedUSD = totalBorrowedETH * ETH_TO_USD
     
     console.log('[portfolio] 🔍 After USD conversion:')
     console.log('[portfolio] totalSuppliedUSD:', totalSuppliedUSD)
     console.log('[portfolio] totalBorrowedUSD:', totalBorrowedUSD)
+    
+    // Debug: Check if values are essentially zero
+    console.log('[portfolio] 🔍 Value analysis:')
+    console.log('[portfolio] totalSuppliedETH in scientific notation:', totalSuppliedETH.toExponential())
+    console.log('[portfolio] totalSuppliedUSD in scientific notation:', totalSuppliedUSD.toExponential())
+    console.log('[portfolio] Is totalSuppliedUSD essentially zero?', totalSuppliedUSD < 0.01)
 
     console.log('[portfolio] Parsed data:', {
       totalCollateralETH: totalCollateralETH.toString(),
@@ -122,26 +129,28 @@ async function fetchPortfolioData(address: `0x${string}`): Promise<PortfolioData
     // Handle health factor for no position case
     // Aave returns a very large number (2^256-1) when there are no positions
     const MAX_SAFE_HEALTH_FACTOR = 1e10 // 10 billion - anything larger is considered "infinite"
+    const isDustAmount = totalSuppliedUSD < 0.01 // Less than 1 cent is considered dust
     const isNoPosition = totalSuppliedUSD === 0 && totalBorrowedUSD === 0
     const isInfiniteHealthFactor = healthFactorNum > MAX_SAFE_HEALTH_FACTOR
-    const effectiveHealthFactor = isNoPosition || isInfiniteHealthFactor ? 0 : healthFactorNum
+    const effectiveHealthFactor = (isNoPosition || isDustAmount || isInfiniteHealthFactor) ? 0 : healthFactorNum
     
     console.log('[portfolio] 🔍 Health factor analysis:')
     console.log('[portfolio] isNoPosition:', isNoPosition)
+    console.log('[portfolio] isDustAmount:', isDustAmount)
     console.log('[portfolio] isInfiniteHealthFactor:', isInfiniteHealthFactor)
     console.log('[portfolio] effectiveHealthFactor:', effectiveHealthFactor)
 
-    // Calculate utilization (borrowed / supplied)
-    const utilization = totalSuppliedUSD > 0 ? (totalBorrowedUSD / totalSuppliedUSD) * 100 : 0
+    // Calculate utilization (borrowed / supplied) - only for meaningful amounts
+    const utilization = (totalSuppliedUSD > 0.01 && totalBorrowedUSD > 0) ? (totalBorrowedUSD / totalSuppliedUSD) * 100 : 0
 
     // Calculate net APY (simplified - in real app you'd calculate based on actual positions)
-    const netAPY = totalSuppliedUSD > 0 ? '2.85%' : '0.00%' // Placeholder
+    const netAPY = totalSuppliedUSD > 0.01 ? '2.85%' : '0.00%' // Placeholder
 
     // Calculate estimated monthly yield
-    const monthlyYield = totalSuppliedUSD > 0 ? (totalSuppliedUSD * 0.0285 / 12) : 0
+    const monthlyYield = totalSuppliedUSD > 0.01 ? (totalSuppliedUSD * 0.0285 / 12) : 0
 
     // Count positions (simplified - count tokens with balance > 0)
-    const positions = totalSuppliedUSD > 0 || totalBorrowedUSD > 0 ? 1 : 0
+    const positions = totalSuppliedUSD > 0.01 || totalBorrowedUSD > 0.01 ? 1 : 0
 
     return {
       totalSupplied: totalSuppliedUSD.toFixed(2),
