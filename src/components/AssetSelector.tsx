@@ -206,7 +206,7 @@ export function AssetSelector({ selectedToken, onTokenSelect }: AssetSelectorPro
                     localSelectedToken?.symbol === token.symbol ? "text-white" : "text-green-500"
                   }`}
                 >
-                  {token.supplyAPY ? `${token.supplyAPY.toFixed(5)}%` : token.apy}
+                  {token.supplyAPY ? `${token.supplyAPY.toFixed(2)}%` : token.apy}
                 </div>
               </div>
               <div>
@@ -222,7 +222,7 @@ export function AssetSelector({ selectedToken, onTokenSelect }: AssetSelectorPro
                     localSelectedToken?.symbol === token.symbol ? "text-white" : "text-orange-500"
                   }`}
                 >
-                  {token.borrowAPY ? `${token.borrowAPY.toFixed(5)}%` : 'N/A'}
+                  {token.borrowAPY ? `${token.borrowAPY.toFixed(2)}%` : 'N/A'}
                 </div>
               </div>
             </div>
