@@ -108,16 +108,28 @@ export function calculateTransactionFee(amount: string): string {
   return (numAmount * TRANSACTION_FEE_RATE).toFixed(6)
 }
 
-// Check if we're in a real Farcaster environment with actual wallet
+// Check if we're in a real environment with actual wallet
 async function isRealFarcasterEnvironment() {
   try {
+    // Check for Farcaster authentication token
     const token = await getAuthToken()
-    if (!token) return false
+    if (token) {
+      console.log('[env] Real Farcaster environment detected (has token)')
+      return true
+    }
     
-    // If we have a token, we're authenticated
-    return true
+    // Also check if we have a connected wallet via Wagmi
+    // This allows the app to work in web browsers with wallet connections
+    const address = await getAuthenticatedAddress()
+    if (address) {
+      console.log('[env] Real environment detected (has connected wallet):', address)
+      return true
+    }
+    
+    console.log('[env] Mock environment - no token or wallet connection')
+    return false
   } catch (error) {
-    console.warn('Error checking real Farcaster environment:', error)
+    console.warn('Error checking real environment:', error)
     return false
   }
 }
