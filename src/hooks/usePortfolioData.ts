@@ -81,6 +81,16 @@ async function fetchPortfolioData(address: `0x${string}`): Promise<PortfolioData
       healthFactorNum,
       ltvNum
     })
+    
+    console.log('[portfolio] Raw userData array:', userData)
+    console.log('[portfolio] Individual values:', {
+      totalCollateralETH: userData[0]?.toString(),
+      totalDebtETH: userData[1]?.toString(),
+      availableBorrowsETH: userData[2]?.toString(),
+      currentLiquidationThreshold: userData[3]?.toString(),
+      ltv: userData[4]?.toString(),
+      healthFactor: userData[5]?.toString()
+    })
 
     // Handle health factor for no position case
     // Aave returns a very large number (2^256-1) when there are no positions
