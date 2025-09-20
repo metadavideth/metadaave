@@ -72,6 +72,12 @@ async function fetchPortfolioData(address: `0x${string}`): Promise<PortfolioData
     const totalBorrowedETH = parseFloat(formatUnits(totalDebtETH, 18))
     const healthFactorNum = parseFloat(formatUnits(healthFactor, 18))
     const ltvNum = parseFloat(formatUnits(ltv, 4)) // LTV is in basis points (10000 = 100%)
+    
+    console.log('[portfolio] 🔍 After formatUnits conversion:')
+    console.log('[portfolio] totalSuppliedETH:', totalSuppliedETH)
+    console.log('[portfolio] totalBorrowedETH:', totalBorrowedETH)
+    console.log('[portfolio] healthFactorNum:', healthFactorNum)
+    console.log('[portfolio] ltvNum:', ltvNum)
 
     console.log('[portfolio] Parsed data:', {
       totalCollateralETH: totalCollateralETH.toString(),
@@ -108,7 +114,13 @@ async function fetchPortfolioData(address: `0x${string}`): Promise<PortfolioData
     // Aave returns a very large number (2^256-1) when there are no positions
     const MAX_SAFE_HEALTH_FACTOR = 1e10 // 10 billion - anything larger is considered "infinite"
     const isNoPosition = totalSuppliedETH === 0 && totalBorrowedETH === 0
-    const effectiveHealthFactor = isNoPosition ? 0 : (healthFactorNum > MAX_SAFE_HEALTH_FACTOR ? 0 : healthFactorNum)
+    const isInfiniteHealthFactor = healthFactorNum > MAX_SAFE_HEALTH_FACTOR
+    const effectiveHealthFactor = isNoPosition || isInfiniteHealthFactor ? 0 : healthFactorNum
+    
+    console.log('[portfolio] 🔍 Health factor analysis:')
+    console.log('[portfolio] isNoPosition:', isNoPosition)
+    console.log('[portfolio] isInfiniteHealthFactor:', isInfiniteHealthFactor)
+    console.log('[portfolio] effectiveHealthFactor:', effectiveHealthFactor)
 
     // Calculate utilization (borrowed / supplied)
     const utilization = totalSuppliedETH > 0 ? (totalBorrowedETH / totalSuppliedETH) * 100 : 0
