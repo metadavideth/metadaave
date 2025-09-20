@@ -86,11 +86,11 @@ async function fetchPortfolioData(address: `0x${string}`): Promise<PortfolioData
     const positions = totalSuppliedETH > 0 || totalBorrowedETH > 0 ? 1 : 0
 
     return {
-      totalSupplied: totalSuppliedETH.toFixed(2),
-      totalBorrowed: totalBorrowedETH.toFixed(2),
+      totalSupplied: totalSuppliedETH.toFixed(5),
+      totalBorrowed: totalBorrowedETH.toFixed(5),
       healthFactor: healthFactorNum,
       netAPY,
-      yieldEstimate: monthlyYield.toFixed(2),
+      yieldEstimate: monthlyYield.toFixed(5),
       utilization: Math.round(utilization),
       ltv: Math.round(ltvNum),
       positions,

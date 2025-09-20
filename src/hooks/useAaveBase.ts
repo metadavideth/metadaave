@@ -194,7 +194,7 @@ export function useTokensWithAaveBase() {
         supplyAPY,
         borrowAPY,
         decimals: reserveData.decimals || 18,
-        apy: `${supplyAPY.toFixed(2)}%`,
+        apy: `${supplyAPY.toFixed(5)}%`,
       }
     }
 

@@ -130,7 +130,7 @@ export function useTokensWithBalances(farcasterWalletAddress?: `0x${string}`, ch
     const userBalance = balances?.[token.address.toLowerCase()] || '0'
     const userBalanceFormatted = userBalance === '0' 
       ? '0' 
-      : parseFloat(userBalance).toFixed(4)
+      : parseFloat(userBalance).toFixed(7)
 
     return {
       ...token,

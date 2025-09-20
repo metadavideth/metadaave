@@ -68,7 +68,7 @@ export function Dashboard() {
             <div>
               <div className="text-xs text-white/80 mb-1">Health Factor</div>
               <div className={`text-lg font-semibold ${dashboardData.healthFactor > 0 ? getHealthFactorTextColor(dashboardData.healthFactor) : 'text-white'}`}>
-                {isLoading ? '...' : dashboardData.healthFactor > 0 ? dashboardData.healthFactor.toFixed(2) : 'No Position'}
+                {isLoading ? '...' : dashboardData.healthFactor > 0 ? dashboardData.healthFactor.toFixed(5) : 'No Position'}
               </div>
             </div>
             <div className="text-right">
