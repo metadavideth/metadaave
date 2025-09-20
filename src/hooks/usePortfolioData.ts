@@ -93,44 +93,110 @@ async function fetchPortfolioData(address: `0x${string}`): Promise<PortfolioData
     console.log('[portfolio] totalSuppliedETH > 0.001:', totalSuppliedETH > 0.001)
     console.log('[portfolio] totalBorrowedETH > 0.001:', totalBorrowedETH > 0.001)
     
-    // TEMPORARY: Since getUserAccountData seems to be returning incorrect values,
-    // let's check if the user has aToken balances instead
-    // For now, let's assume they have positions if they have any aTokens
-    // This is a workaround until we fix the getUserAccountData issue
+    // The issue is likely that Aave returns values in wei (18 decimals) but we're treating them as ETH
+    // Let's check if the raw values are actually in wei and need proper conversion
     
-    // Check if user has aToken balances (aBasUSDbC, etc.)
-    // We'll need to check this separately, but for now let's assume they have positions
-    // since they confirmed they have aBasUSDbC tokens
+    console.log('[portfolio] 🔍 Investigating unit conversion issue:')
+    console.log('[portfolio] Raw totalCollateralETH:', totalCollateralETH.toString())
+    console.log('[portfolio] Raw totalDebtETH:', totalDebtETH.toString())
+    console.log('[portfolio] Raw healthFactor:', healthFactor.toString())
     
-    console.log('[portfolio] 🔍 Bypassing getUserAccountData check - assuming user has positions')
-    console.log('[portfolio] User confirmed they have aBasUSDbC tokens, so they have Aave positions')
+    // Check if the values are actually in wei (18 decimals) by looking at the magnitude
+    const totalCollateralWei = totalCollateralETH.toString()
+    const totalDebtWei = totalDebtETH.toString()
     
-    // For now, let's use a mock value to show the position
-    // TODO: Fix getUserAccountData or use a different method to get real portfolio data
-    const mockTotalSuppliedUSD = 1.02 // User confirmed they supplied 1.02 USDbC
-    const mockTotalBorrowedUSD = 0
-    const mockHealthFactor = 1.5 // Safe health factor
-    const mockNetAPY = '2.85%'
-    const mockMonthlyYield = (mockTotalSuppliedUSD * 0.0285 / 12).toFixed(2)
-    const mockUtilization = 0
-    const mockLtv = 0
-    const mockPositions = 1
+    console.log('[portfolio] 🔍 Wei analysis:')
+    console.log('[portfolio] totalCollateralWei length:', totalCollateralWei.length)
+    console.log('[portfolio] totalDebtWei length:', totalDebtWei.length)
     
-    console.log('[portfolio] 🔍 Using mock data as workaround:')
-    console.log('[portfolio] mockTotalSuppliedUSD:', mockTotalSuppliedUSD)
-    console.log('[portfolio] mockHealthFactor:', mockHealthFactor)
+    // If the values are in wei, they should be much larger numbers
+    // Let's try converting them properly
+    const totalSuppliedETHFromWei = parseFloat(formatUnits(totalCollateralETH, 18))
+    const totalBorrowedETHFromWei = parseFloat(formatUnits(totalDebtETH, 18))
     
-    return {
-      totalSupplied: mockTotalSuppliedUSD.toFixed(2),
-      totalBorrowed: mockTotalBorrowedUSD.toFixed(2),
-      healthFactor: mockHealthFactor,
-      netAPY: mockNetAPY,
-      yieldEstimate: mockMonthlyYield,
-      utilization: mockUtilization,
-      ltv: mockLtv,
-      positions: mockPositions,
-      isLoading: false,
-      error: null
+    console.log('[portfolio] 🔍 After proper wei conversion:')
+    console.log('[portfolio] totalSuppliedETHFromWei:', totalSuppliedETHFromWei)
+    console.log('[portfolio] totalBorrowedETHFromWei:', totalBorrowedETHFromWei)
+    
+    // Check if this makes more sense
+    const hasAavePositions = totalSuppliedETHFromWei > 0.001 || totalBorrowedETHFromWei > 0.001
+    
+    console.log('[portfolio] 🔍 Position analysis with proper conversion:')
+    console.log('[portfolio] hasAavePositions:', hasAavePositions)
+    console.log('[portfolio] totalSuppliedETHFromWei > 0.001:', totalSuppliedETHFromWei > 0.001)
+    console.log('[portfolio] totalBorrowedETHFromWei > 0.001:', totalBorrowedETHFromWei > 0.001)
+    
+    if (!hasAavePositions) {
+      console.log('[portfolio] ❌ Still no meaningful Aave positions after proper conversion')
+      console.log('[portfolio] This suggests getUserAccountData might not be working correctly')
+      console.log('[portfolio] Raw values might be in a different format than expected')
+      
+      // Let's try a different approach - maybe the values are in USD with 8 decimals?
+      const totalSuppliedUSD8Decimals = parseFloat(formatUnits(totalCollateralETH, 8))
+      const totalBorrowedUSD8Decimals = parseFloat(formatUnits(totalDebtETH, 8))
+      
+      console.log('[portfolio] 🔍 Trying 8 decimal conversion (USD format):')
+      console.log('[portfolio] totalSuppliedUSD8Decimals:', totalSuppliedUSD8Decimals)
+      console.log('[portfolio] totalBorrowedUSD8Decimals:', totalBorrowedUSD8Decimals)
+      
+      const hasAavePositions8Decimals = totalSuppliedUSD8Decimals > 0.01 || totalBorrowedUSD8Decimals > 0.01
+      
+      if (hasAavePositions8Decimals) {
+        console.log('[portfolio] ✅ Found positions with 8 decimal conversion!')
+        console.log('[portfolio] Using 8 decimal conversion for portfolio data')
+        
+        // Use the 8 decimal conversion
+        const totalSuppliedUSD = totalSuppliedUSD8Decimals
+        const totalBorrowedUSD = totalBorrowedUSD8Decimals
+        const healthFactorNum = parseFloat(formatUnits(healthFactor, 18))
+        const ltvNum = parseFloat(formatUnits(ltv, 4))
+        
+        // Handle health factor for no position case
+        const MAX_SAFE_HEALTH_FACTOR = 1e10
+        const isInfiniteHealthFactor = healthFactorNum > MAX_SAFE_HEALTH_FACTOR
+        const effectiveHealthFactor = isInfiniteHealthFactor ? 0 : healthFactorNum
+        
+        // Calculate utilization
+        const utilization = (totalSuppliedUSD > 0 && totalBorrowedUSD > 0) ? (totalBorrowedUSD / totalSuppliedUSD) * 100 : 0
+        
+        // Calculate net APY
+        const netAPY = totalSuppliedUSD > 0 ? '2.85%' : '0.00%'
+        
+        // Calculate estimated monthly yield
+        const monthlyYield = totalSuppliedUSD > 0 ? (totalSuppliedUSD * 0.0285 / 12) : 0
+        
+        // Count positions
+        const positions = totalSuppliedUSD > 0 || totalBorrowedUSD > 0 ? 1 : 0
+        
+        return {
+          totalSupplied: totalSuppliedUSD.toFixed(2),
+          totalBorrowed: totalBorrowedUSD.toFixed(2),
+          healthFactor: effectiveHealthFactor,
+          netAPY,
+          yieldEstimate: monthlyYield.toFixed(2),
+          utilization: Math.round(utilization),
+          ltv: Math.round(ltvNum),
+          positions,
+          isLoading: false,
+          error: null
+        }
+      } else {
+        console.log('[portfolio] ❌ Still no positions found with 8 decimal conversion')
+        console.log('[portfolio] Returning zero values - getUserAccountData may not be working')
+        
+        return {
+          totalSupplied: '0.00',
+          totalBorrowed: '0.00',
+          healthFactor: 0,
+          netAPY: '0.00%',
+          yieldEstimate: '0.00',
+          utilization: 0,
+          ltv: 0,
+          positions: 0,
+          isLoading: false,
+          error: null
+        }
+      }
     }
     
     // Convert ETH values to USD (using current ETH price)
