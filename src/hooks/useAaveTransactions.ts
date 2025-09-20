@@ -1,9 +1,9 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAccount } from 'wagmi'
 import { parseUnits, formatUnits } from 'viem'
-import { createWalletClient, createPublicClient, http, getContract } from 'viem'
+import { createWalletClient, createPublicClient, http, getContract, custom } from 'viem'
 import { base } from 'viem/chains'
-import { getAuthToken, isFarcasterEnvironment, mockFarcasterUser } from '../utils/farcaster'
+import { getAuthToken, isFarcasterEnvironment, mockFarcasterUser, getFarcasterSDK } from '../utils/farcaster'
 import type { Token } from '../types'
 
 // Aave V3 Pool ABI - minimal for core functions
@@ -152,10 +152,24 @@ async function getFarcasterWalletClient(address: string) {
       return createMockWalletClient(address as `0x${string}`)
     }
 
-    // In real Farcaster environment, we need to use the Farcaster SDK for transactions
-    // For now, return a mock client since we don't have the proper Farcaster transaction setup
-    console.log('[wallet-client] Using mock client for real environment (Farcaster SDK integration needed)')
-    return createMockWalletClient(address as `0x${string}`)
+    // In real Farcaster environment, use the Farcaster SDK's Ethereum provider
+    console.log('[wallet-client] Creating real wallet client using Farcaster SDK')
+    const sdk = getFarcasterSDK()
+    
+    if (!sdk?.wallet?.ethProvider) {
+      console.error('[wallet-client] No Farcaster Ethereum provider available')
+      throw new Error('Farcaster Ethereum provider not available')
+    }
+
+    // Create wallet client using Farcaster's Ethereum provider
+    const walletClient = createWalletClient({
+      chain: base,
+      transport: custom(sdk.wallet.ethProvider),
+      account: address as `0x${string}`,
+    })
+    
+    console.log('[wallet-client] Wallet client created successfully with Farcaster provider')
+    return walletClient
   } catch (error) {
     console.error('Failed to create Farcaster wallet client:', error)
     throw new Error(`Failed to initialize wallet: ${error instanceof Error ? error.message : 'Unknown error'}`)
@@ -308,7 +322,7 @@ async function ensureTokenApproval(
     
     if (currentAllowance < amount) {
       // Need to approve
-      const walletClient = await getFarcasterWalletClient()
+      const walletClient = await getFarcasterWalletClient(userAddress)
       const tokenContractWrite = getContract({
         address: tokenAddress,
         abi: ERC20_ABI,
