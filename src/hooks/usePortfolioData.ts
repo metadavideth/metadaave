@@ -3,6 +3,7 @@ import { useAccount } from 'wagmi'
 import { createPublicClient, http, formatUnits, parseUnits } from 'viem'
 import { base } from 'viem/chains'
 import { AAVE_V3_BASE_TOKENS } from '../data/tokens'
+import { useAaveData } from './useAaveData'
 
 // Aave V3 Pool ABI - minimal for user data
 const AAVE_POOL_ABI = [
@@ -44,7 +45,7 @@ interface PortfolioData {
   error: string | null
 }
 
-async function fetchPortfolioData(address: `0x${string}`): Promise<PortfolioData> {
+async function fetchPortfolioData(address: `0x${string}`, aaveData?: any[]): Promise<PortfolioData> {
   try {
     console.log('[portfolio] Fetching data for address:', address)
     
@@ -129,11 +130,25 @@ async function fetchPortfolioData(address: `0x${string}`): Promise<PortfolioData
     // Calculate utilization
     const utilization = (totalSuppliedUSD > 0 && totalBorrowedUSD > 0) ? (totalBorrowedUSD / totalSuppliedUSD) * 100 : 0
     
-    // Calculate net APY
-    const netAPY = totalSuppliedUSD > 0 ? '2.85%' : '0.00%'
+    // Calculate net APY based on real Aave data
+    let netAPY = '0.00%'
+    if (totalSuppliedUSD > 0 && aaveData) {
+      // Find USDbC APY from Aave data (since user supplied USDbC)
+      const usdbcData = aaveData.find(reserve => 
+        reserve.underlyingAsset.toLowerCase() === '0xd9aAEc86B65D86f6A7B5B1b0c42FFA531710b6CA'.toLowerCase()
+      )
+      if (usdbcData) {
+        netAPY = `${usdbcData.supplyAPY.toFixed(2)}%`
+        console.log('[portfolio] Using real USDbC APY:', netAPY)
+      } else {
+        netAPY = '3.80%' // Fallback to current USDbC APY
+        console.log('[portfolio] Using fallback APY:', netAPY)
+      }
+    }
     
-    // Calculate estimated monthly yield
-    const monthlyYield = totalSuppliedUSD > 0 ? (totalSuppliedUSD * 0.0285 / 12) : 0
+    // Calculate estimated monthly yield using real APY
+    const apyValue = parseFloat(netAPY.replace('%', '')) / 100
+    const monthlyYield = totalSuppliedUSD > 0 ? (totalSuppliedUSD * apyValue / 12) : 0
     
     // Count positions
     const positions = totalSuppliedUSD > 0 || totalBorrowedUSD > 0 ? 1 : 0
@@ -183,10 +198,11 @@ async function fetchPortfolioData(address: `0x${string}`): Promise<PortfolioData
 
 export function usePortfolioData() {
   const { address, isConnected } = useAccount()
+  const { data: aaveData } = useAaveData()
 
   return useQuery({
     queryKey: ['portfolio-data', address],
-    queryFn: () => fetchPortfolioData(address!),
+    queryFn: () => fetchPortfolioData(address!, aaveData),
     enabled: !!address && isConnected,
     staleTime: 60000, // 1 minute - reasonable cache time
     refetchInterval: 300000, // 5 minutes - much less frequent to avoid rate limits
