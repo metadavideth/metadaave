@@ -205,6 +205,7 @@ async function executeAaveTransaction(params: TransactionParams, userAddress: st
     const isRealEnv = await isRealFarcasterEnvironment(userAddress)
     
     // Get Farcaster wallet client
+    console.log('[transaction] About to create wallet client with address:', userAddress, 'type:', typeof userAddress)
     const walletClient = await getFarcasterWalletClient(userAddress)
 
     const tokenAddress = token.address as `0x${string}`
