@@ -248,7 +248,7 @@ async function fetchAaveReserveData(): Promise<ReserveData[]> {
       stack: error instanceof Error ? error.stack : undefined,
       name: error instanceof Error ? error.name : undefined
     })
-    console.log('Falling back to mock data')
+    console.log('Falling back to mock data - rates will be simulated')
     
     // Return mock data with correct fallback flag
     const mockDataWithCorrectFlag = MOCK_RESERVE_DATA.map(reserve => ({
@@ -276,10 +276,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const reserves = await fetchAaveReserveData()
     
+    const isUsingFallback = reserves[0]?.isUsingFallbackData || false
+    
+    // Add header to make it clear when using fallback data
+    if (isUsingFallback) {
+      res.setHeader('X-Data-Source', 'mock-fallback')
+    } else {
+      res.setHeader('X-Data-Source', 'aave-sdk-real')
+    }
+    
     res.status(200).json({
       success: true,
       data: reserves,
-      isUsingFallbackData: reserves[0]?.isUsingFallbackData || false,
+      isUsingFallbackData: isUsingFallback,
       timestamp: new Date().toISOString()
     })
   } catch (error) {
