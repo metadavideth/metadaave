@@ -45,7 +45,11 @@ export function ActionTabs({ onTransactionSuccess, selectedToken }: ActionTabsPr
   ]
 
   const handleTransaction = async () => {
-    if (!amount || Number.parseFloat(amount) <= 0) return
+    console.log('[ActionTabs] handleTransaction called with amount:', amount, 'activeTab:', activeTab)
+    if (!amount || Number.parseFloat(amount) <= 0) {
+      console.log('[ActionTabs] No amount or amount <= 0, returning early')
+      return
+    }
 
     setError(null)
 
@@ -54,20 +58,29 @@ export function ActionTabs({ onTransactionSuccess, selectedToken }: ActionTabsPr
         token: currentToken,
         amount: amount,
       }
+      console.log('[ActionTabs] Transaction params:', transactionParams)
 
       let result
       switch (activeTab) {
         case 'supply':
+          console.log('[ActionTabs] Calling supply.mutateAsync...')
           result = await supply.mutateAsync(transactionParams)
+          console.log('[ActionTabs] Supply result:', result)
           break
         case 'borrow':
+          console.log('[ActionTabs] Calling borrow.mutateAsync...')
           result = await borrow.mutateAsync(transactionParams)
+          console.log('[ActionTabs] Borrow result:', result)
           break
         case 'repay':
+          console.log('[ActionTabs] Calling repay.mutateAsync...')
           result = await repay.mutateAsync(transactionParams)
+          console.log('[ActionTabs] Repay result:', result)
           break
         case 'withdraw':
+          console.log('[ActionTabs] Calling withdraw.mutateAsync...')
           result = await withdraw.mutateAsync(transactionParams)
+          console.log('[ActionTabs] Withdraw result:', result)
           break
         default:
           throw new Error('Invalid action')
