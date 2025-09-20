@@ -108,7 +108,9 @@ async function fetchAllTokenBalances(farcasterWalletAddress: `0x${string}`, chai
       
       // Add delay between requests to avoid rate limiting (except for last token)
       if (i < AAVE_V3_BASE_TOKENS.length - 1) {
-        await delay(200) // 200ms delay between requests
+        // Longer delay after first few requests to reset rate limiter
+        const delayMs = i >= 3 ? 1000 : 500
+        await delay(delayMs)
       }
     }
     
