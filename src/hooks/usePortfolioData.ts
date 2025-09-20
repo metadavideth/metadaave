@@ -73,6 +73,12 @@ async function fetchPortfolioData(address: `0x${string}`): Promise<PortfolioData
     const healthFactorNum = parseFloat(formatUnits(healthFactor, 18))
     const ltvNum = parseFloat(formatUnits(ltv, 4)) // LTV is in basis points (10000 = 100%)
 
+    // Handle health factor for no position case
+    // Aave returns a very large number (2^256-1) when there are no positions
+    const MAX_SAFE_HEALTH_FACTOR = 1e10 // 10 billion - anything larger is considered "infinite"
+    const isNoPosition = totalSuppliedETH === 0 && totalBorrowedETH === 0
+    const effectiveHealthFactor = isNoPosition ? 0 : (healthFactorNum > MAX_SAFE_HEALTH_FACTOR ? 0 : healthFactorNum)
+
     // Calculate utilization (borrowed / supplied)
     const utilization = totalSuppliedETH > 0 ? (totalBorrowedETH / totalSuppliedETH) * 100 : 0
 
@@ -88,7 +94,7 @@ async function fetchPortfolioData(address: `0x${string}`): Promise<PortfolioData
     return {
       totalSupplied: totalSuppliedETH.toFixed(5),
       totalBorrowed: totalBorrowedETH.toFixed(5),
-      healthFactor: healthFactorNum,
+      healthFactor: effectiveHealthFactor,
       netAPY,
       yieldEstimate: monthlyYield.toFixed(2),
       utilization: Math.round(utilization),
