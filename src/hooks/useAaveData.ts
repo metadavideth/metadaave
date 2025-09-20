@@ -78,7 +78,7 @@ export function useEnrichedTokens() {
         supplyAPY: reserveData.supplyAPY,
         borrowAPY: reserveData.borrowAPY,
         decimals: reserveData.decimals,
-        apy: `${reserveData.supplyAPY.toFixed(5)}%`,
+        apy: `${reserveData.supplyAPY.toFixed(2)}%`,
       }
     }
 

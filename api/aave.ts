@@ -55,8 +55,8 @@ const MOCK_RESERVE_DATA: ReserveData[] = [
     priceInEth: '0.0005',
     priceInUsd: '1.00',
     isActive: true,
-    supplyAPY: 4.12345,
-    borrowAPY: 6.12345,
+    supplyAPY: 4.12,
+    borrowAPY: 6.12,
     isUsingFallbackData: true
   },
   {
@@ -72,8 +72,8 @@ const MOCK_RESERVE_DATA: ReserveData[] = [
     priceInEth: '0.0005',
     priceInUsd: '1.00',
     isActive: true,
-    supplyAPY: 4.12345,
-    borrowAPY: 6.12345,
+    supplyAPY: 4.12,
+    borrowAPY: 6.12,
     isUsingFallbackData: true
   },
   {
@@ -89,8 +89,8 @@ const MOCK_RESERVE_DATA: ReserveData[] = [
     priceInEth: '15.0',
     priceInUsd: '30000.00',
     isActive: true,
-    supplyAPY: 2.12345,
-    borrowAPY: 4.12345,
+    supplyAPY: 2.12,
+    borrowAPY: 4.12,
     isUsingFallbackData: true
   },
   {
@@ -106,8 +106,8 @@ const MOCK_RESERVE_DATA: ReserveData[] = [
     priceInEth: '1.0',
     priceInUsd: '2000.00',
     isActive: true,
-    supplyAPY: 3.12345,
-    borrowAPY: 5.12345,
+    supplyAPY: 3.12,
+    borrowAPY: 5.12,
     isUsingFallbackData: true
   },
   {
@@ -123,8 +123,8 @@ const MOCK_RESERVE_DATA: ReserveData[] = [
     priceInEth: '1.0',
     priceInUsd: '2000.00',
     isActive: true,
-    supplyAPY: 3.12345,
-    borrowAPY: 5.12345,
+    supplyAPY: 3.12,
+    borrowAPY: 5.12,
     isUsingFallbackData: true
   },
   {
@@ -140,8 +140,8 @@ const MOCK_RESERVE_DATA: ReserveData[] = [
     priceInEth: '0.00045',
     priceInUsd: '0.90',
     isActive: true,
-    supplyAPY: 2.12345,
-    borrowAPY: 4.12345,
+    supplyAPY: 2.12,
+    borrowAPY: 4.12,
     isUsingFallbackData: true
   },
   {
@@ -157,8 +157,8 @@ const MOCK_RESERVE_DATA: ReserveData[] = [
     priceInEth: '15.0',
     priceInUsd: '30000.00',
     isActive: true,
-    supplyAPY: 1.85123,
-    borrowAPY: 3.51234,
+    supplyAPY: 1.85,
+    borrowAPY: 3.51,
     isUsingFallbackData: true
   },
   {
@@ -174,8 +174,8 @@ const MOCK_RESERVE_DATA: ReserveData[] = [
     priceInEth: '0.0005',
     priceInUsd: '1.00',
     isActive: true,
-    supplyAPY: 3.51234,
-    borrowAPY: 5.51234,
+    supplyAPY: 3.51,
+    borrowAPY: 5.51,
     isUsingFallbackData: true
   }
 ]

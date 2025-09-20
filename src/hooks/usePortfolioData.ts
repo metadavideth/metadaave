@@ -90,7 +90,7 @@ async function fetchPortfolioData(address: `0x${string}`): Promise<PortfolioData
       totalBorrowed: totalBorrowedETH.toFixed(5),
       healthFactor: healthFactorNum,
       netAPY,
-      yieldEstimate: monthlyYield.toFixed(5),
+      yieldEstimate: monthlyYield.toFixed(2),
       utilization: Math.round(utilization),
       ltv: Math.round(ltvNum),
       positions,
