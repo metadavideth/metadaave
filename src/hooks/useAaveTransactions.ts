@@ -236,16 +236,29 @@ export function useAaveTransactions() {
       const amountWei = parseUnits(amount, token.decimals || 18)
       
       try {
-        // For now, let's just do the supply transaction directly
-        // Most tokens on Aave V3 don't need approval for supply
-        console.log('[transaction] Supplying to Aave...')
+        // Step 1: First approve the token
+        console.log('[transaction] Step 1: Approving token...')
+        writeContract({
+          address: token.address as `0x${string}`,
+          abi: ERC20_ABI,
+          functionName: 'approve',
+          args: [AAVE_V3_POOL_ADDRESS, BigInt('0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff')]
+        })
+        console.log('[transaction] Approval transaction submitted - please approve in wallet')
+        
+        // Wait for user to approve
+        console.log('[transaction] Waiting for approval confirmation...')
+        await new Promise(resolve => setTimeout(resolve, 10000)) // Wait 10 seconds for approval
+        
+        // Step 2: Then supply to Aave
+        console.log('[transaction] Step 2: Supplying to Aave...')
         writeContract({
           address: AAVE_V3_POOL_ADDRESS,
           abi: AAVE_V3_POOL_ABI,
           functionName: 'supply',
           args: [token.address, amountWei, address, 0]
         })
-        console.log('[transaction] Supply transaction submitted')
+        console.log('[transaction] Supply transaction submitted - please approve in wallet')
         
         // Return a mock hash for now since we can't get the real hash from writeContract
         const mockHash = `0x${Math.random().toString(16).substr(2, 64)}` as `0x${string}`
