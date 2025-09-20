@@ -250,12 +250,12 @@ async function fetchAaveReserveData(): Promise<ReserveData[]> {
     })
     console.log('Falling back to mock data')
     
-    // Temporarily return mock data as if it's real data to test frontend
-    const mockDataWithRealFlag = MOCK_RESERVE_DATA.map(reserve => ({
+    // Return mock data with correct fallback flag
+    const mockDataWithCorrectFlag = MOCK_RESERVE_DATA.map(reserve => ({
       ...reserve,
-      isUsingFallbackData: false
+      isUsingFallbackData: true  // Correctly mark as fallback data
     }))
-    return mockDataWithRealFlag
+    return mockDataWithCorrectFlag
   }
 }
 
