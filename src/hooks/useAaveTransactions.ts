@@ -135,10 +135,10 @@ async function isRealFarcasterEnvironment(address?: string) {
 // Get Farcaster wallet client with proper error handling
 async function getFarcasterWalletClient(address: string) {
   try {
-    console.log('[wallet-client] Creating wallet client for address:', address)
+    console.log('[wallet-client] Creating wallet client for address:', address, 'type:', typeof address, 'length:', address?.length)
     
     if (!address) {
-      console.error('[wallet-client] No address provided')
+      console.error('[wallet-client] No address provided - address is falsy:', address)
       throw new Error('No authenticated address found')
     }
 
@@ -154,7 +154,15 @@ async function getFarcasterWalletClient(address: string) {
 
     // In real Farcaster environment, use the Farcaster SDK's Ethereum provider
     console.log('[wallet-client] Creating real wallet client using Farcaster SDK')
-    const sdk = getFarcasterSDK()
+    
+    let sdk
+    try {
+      sdk = getFarcasterSDK()
+      console.log('[wallet-client] SDK retrieved successfully:', !!sdk, 'wallet:', !!sdk?.wallet, 'ethProvider:', !!sdk?.wallet?.ethProvider)
+    } catch (sdkError) {
+      console.error('[wallet-client] Error getting Farcaster SDK:', sdkError)
+      throw new Error(`Failed to get Farcaster SDK: ${sdkError instanceof Error ? sdkError.message : 'Unknown error'}`)
+    }
     
     if (!sdk?.wallet?.ethProvider) {
       console.error('[wallet-client] No Farcaster Ethereum provider available')
