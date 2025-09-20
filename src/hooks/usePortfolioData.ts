@@ -156,6 +156,34 @@ async function fetchPortfolioData(address: `0x${string}`): Promise<PortfolioData
         const isInfiniteHealthFactor = healthFactorNum > MAX_SAFE_HEALTH_FACTOR
         const effectiveHealthFactor = isInfiniteHealthFactor ? 0 : healthFactorNum
         
+        console.log('[portfolio] 🔍 Health factor analysis:')
+        console.log('[portfolio] healthFactorNum (raw):', healthFactorNum)
+        console.log('[portfolio] isInfiniteHealthFactor:', isInfiniteHealthFactor)
+        console.log('[portfolio] effectiveHealthFactor:', effectiveHealthFactor)
+        console.log('[portfolio] totalSuppliedUSD:', totalSuppliedUSD)
+        console.log('[portfolio] totalBorrowedUSD:', totalBorrowedUSD)
+        
+        // If user has no debt (totalBorrowedUSD = 0), health factor should be infinite
+        if (totalBorrowedUSD === 0 && totalSuppliedUSD > 0) {
+          console.log('[portfolio] ✅ User has no debt - health factor should be infinite')
+          // For display purposes, show a very high health factor
+          const infiniteHealthFactor = 999.99
+          console.log('[portfolio] Setting health factor to:', infiniteHealthFactor)
+          
+          return {
+            totalSupplied: totalSuppliedUSD.toFixed(2),
+            totalBorrowed: totalBorrowedUSD.toFixed(2),
+            healthFactor: infiniteHealthFactor,
+            netAPY,
+            yieldEstimate: monthlyYield.toFixed(2),
+            utilization: Math.round(utilization),
+            ltv: Math.round(ltvNum),
+            positions,
+            isLoading: false,
+            error: null
+          }
+        }
+        
         // Calculate utilization
         const utilization = (totalSuppliedUSD > 0 && totalBorrowedUSD > 0) ? (totalBorrowedUSD / totalSuppliedUSD) * 100 : 0
         
@@ -204,6 +232,38 @@ async function fetchPortfolioData(address: `0x${string}`): Promise<PortfolioData
     const ETH_TO_USD = 2000 // Current ETH price
     const totalSuppliedUSD = totalSuppliedETH * ETH_TO_USD
     const totalBorrowedUSD = totalBorrowedETH * ETH_TO_USD
+    
+    console.log('[portfolio] 🔍 Health factor analysis (18 decimal path):')
+    console.log('[portfolio] healthFactorNum:', healthFactorNum)
+    console.log('[portfolio] totalSuppliedUSD:', totalSuppliedUSD)
+    console.log('[portfolio] totalBorrowedUSD:', totalBorrowedUSD)
+    
+    // If user has no debt (totalBorrowedUSD = 0), health factor should be infinite
+    if (totalBorrowedUSD === 0 && totalSuppliedUSD > 0) {
+      console.log('[portfolio] ✅ User has no debt - health factor should be infinite (18 decimal path)')
+      // For display purposes, show a very high health factor
+      const infiniteHealthFactor = 999.99
+      console.log('[portfolio] Setting health factor to:', infiniteHealthFactor)
+      
+      // Calculate other values
+      const netAPY = totalSuppliedUSD > 0 ? '2.85%' : '0.00%'
+      const monthlyYield = totalSuppliedUSD > 0 ? (totalSuppliedUSD * 0.0285 / 12) : 0
+      const utilization = 0
+      const positions = totalSuppliedUSD > 0 ? 1 : 0
+      
+      return {
+        totalSupplied: totalSuppliedUSD.toFixed(2),
+        totalBorrowed: totalBorrowedUSD.toFixed(2),
+        healthFactor: infiniteHealthFactor,
+        netAPY,
+        yieldEstimate: monthlyYield.toFixed(2),
+        utilization: Math.round(utilization),
+        ltv: Math.round(ltvNum),
+        positions,
+        isLoading: false,
+        error: null
+      }
+    }
     
     console.log('[portfolio] 🔍 After USD conversion:')
     console.log('[portfolio] totalSuppliedUSD:', totalSuppliedUSD)
