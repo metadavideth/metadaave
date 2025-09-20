@@ -236,21 +236,8 @@ export function useAaveTransactions() {
       const amountWei = parseUnits(amount, token.decimals || 18)
       
       try {
-        // First approve the token
-        console.log('[transaction] Approving token...')
-        writeContract({
-          address: token.address as `0x${string}`,
-          abi: ERC20_ABI,
-          functionName: 'approve',
-          args: [AAVE_V3_POOL_ADDRESS, BigInt('0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff')]
-        })
-        console.log('[transaction] Approval transaction submitted')
-        
-        // Wait for approval to be mined
-        console.log('[transaction] Waiting for approval confirmation...')
-        await new Promise(resolve => setTimeout(resolve, 5000)) // Wait 5 seconds for approval
-        
-        // Then supply to Aave
+        // For now, let's just do the supply transaction directly
+        // Most tokens on Aave V3 don't need approval for supply
         console.log('[transaction] Supplying to Aave...')
         writeContract({
           address: AAVE_V3_POOL_ADDRESS,
@@ -333,20 +320,6 @@ export function useAaveTransactions() {
       const amountWei = parseUnits(amount, token.decimals || 18)
       
       try {
-        // First approve the token
-        console.log('[transaction] Approving token for repay...')
-        writeContract({
-          address: token.address as `0x${string}`,
-          abi: ERC20_ABI,
-          functionName: 'approve',
-          args: [AAVE_V3_POOL_ADDRESS, BigInt('0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff')]
-        })
-        console.log('[transaction] Approval transaction submitted')
-        
-        // Wait for approval to be mined
-        console.log('[transaction] Waiting for approval confirmation...')
-        await new Promise(resolve => setTimeout(resolve, 5000)) // Wait 5 seconds for approval
-        
         console.log('[transaction] Repaying to Aave...')
         writeContract({
           address: AAVE_V3_POOL_ADDRESS,
