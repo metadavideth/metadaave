@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { AAVE_V3_BASE_TOKENS } from "../data/tokens"
 import { useAaveTransactions, calculateTransactionFee } from "../hooks/useAaveTransactions"
+import { useTokenPosition } from "../hooks/useUserPositions"
 import type { Token } from "../types"
 
 interface ActionTabsProps {
@@ -20,6 +21,7 @@ export function ActionTabs({ onTransactionSuccess, selectedToken }: ActionTabsPr
   const [error, setError] = useState<string | null>(null)
 
   const { supply, borrow, repay, withdraw } = useAaveTransactions()
+  const { position, isLoading: positionLoading } = useTokenPosition(currentToken.address)
 
   useEffect(() => {
     if (selectedToken) {
@@ -122,11 +124,50 @@ export function ActionTabs({ onTransactionSuccess, selectedToken }: ActionTabsPr
   }
 
   const getMaxAmount = () => {
-    // Extract numeric value from balance string like "0.08 tBTC" -> "0.08" or "1,250.00 USDC" -> "1250.00"
-    const balancePart = currentToken.balance.split(" ")[0]
-    // Remove commas from the balance string (e.g., "1,250.00" -> "1250.00")
-    const numericValue = balancePart.replace(/,/g, '')
-    return numericValue
+    if (positionLoading || !position) {
+      return "0"
+    }
+    
+    switch (activeTab) {
+      case "supply":
+        // For supply, use wallet balance
+        const balancePart = currentToken.balance.split(" ")[0]
+        return balancePart.replace(/,/g, '')
+      case "borrow":
+        // For borrow, use available borrowing power
+        return position.availableToBorrow
+      case "repay":
+        // For repay, use current debt amount
+        return position.availableToRepay
+      case "withdraw":
+        // For withdraw, use supplied amount
+        return position.availableToWithdraw
+      default:
+        return "0"
+    }
+  }
+
+  const getDisplayAmount = () => {
+    if (positionLoading) {
+      return "Loading..."
+    }
+    
+    if (!position) {
+      return "0"
+    }
+    
+    switch (activeTab) {
+      case "supply":
+        return currentToken.balance
+      case "borrow":
+        return `${position.availableToBorrow} ${currentToken.symbol}`
+      case "repay":
+        return `${position.availableToRepay} ${currentToken.symbol}`
+      case "withdraw":
+        return `${position.availableToWithdraw} ${currentToken.symbol}`
+      default:
+        return "0"
+    }
   }
 
   return (
@@ -151,7 +192,7 @@ export function ActionTabs({ onTransactionSuccess, selectedToken }: ActionTabsPr
         <div className="flex justify-between items-center mb-2">
           <label className="text-sm font-medium text-card-foreground">Amount</label>
           <div className="text-xs text-muted-foreground">
-            {getBalanceLabel()}: {currentToken.balance}
+            {getBalanceLabel()}: {getDisplayAmount()}
           </div>
         </div>
 
