@@ -149,9 +149,9 @@ export function usePortfolioData() {
     queryKey: ['portfolio-data', address],
     queryFn: () => fetchPortfolioData(address!),
     enabled: !!address && isConnected,
-    staleTime: 10000, // 10 seconds - shorter cache time
-    refetchInterval: 30000, // 30 seconds - more frequent refetch
+    staleTime: 60000, // 1 minute - reasonable cache time
+    refetchInterval: 300000, // 5 minutes - much less frequent to avoid rate limits
     retry: false,
-    refetchOnWindowFocus: true, // Refetch when window gains focus
+    refetchOnWindowFocus: false, // Disable to avoid unnecessary refetches
   })
 }
