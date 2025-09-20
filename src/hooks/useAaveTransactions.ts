@@ -238,33 +238,30 @@ export function useAaveTransactions() {
       try {
         // Step 1: First approve the token
         console.log('[transaction] Step 1: Approving token...')
-        writeContract({
+        const approveHash = await writeContract({
           address: token.address as `0x${string}`,
           abi: ERC20_ABI,
           functionName: 'approve',
           args: [AAVE_V3_POOL_ADDRESS, BigInt('0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff')]
         })
-        console.log('[transaction] Approval transaction submitted - please approve in wallet')
+        console.log('[transaction] Approval hash:', approveHash)
         
-        // Wait for user to approve
+        // Wait for approval to be mined
         console.log('[transaction] Waiting for approval confirmation...')
-        await new Promise(resolve => setTimeout(resolve, 10000)) // Wait 10 seconds for approval
+        await new Promise(resolve => setTimeout(resolve, 15000)) // Wait 15 seconds for approval to be mined
         
         // Step 2: Then supply to Aave
         console.log('[transaction] Step 2: Supplying to Aave...')
-        writeContract({
+        const supplyHash = await writeContract({
           address: AAVE_V3_POOL_ADDRESS,
           abi: AAVE_V3_POOL_ABI,
           functionName: 'supply',
           args: [token.address, amountWei, address, 0]
         })
-        console.log('[transaction] Supply transaction submitted - please approve in wallet')
-        
-        // Return a mock hash for now since we can't get the real hash from writeContract
-        const mockHash = `0x${Math.random().toString(16).substr(2, 64)}` as `0x${string}`
+        console.log('[transaction] Supply hash:', supplyHash)
         
         return {
-          hash: mockHash,
+          hash: supplyHash,
           action: 'supply',
           amount,
           token: token.symbol,
@@ -279,6 +276,7 @@ export function useAaveTransactions() {
       // Invalidate relevant queries to refresh data
       queryClient.invalidateQueries({ queryKey: ['aave-data'] })
       queryClient.invalidateQueries({ queryKey: ['token-balances'] })
+      queryClient.invalidateQueries({ queryKey: ['portfolio-data'] })
     },
   })
 
@@ -294,18 +292,16 @@ export function useAaveTransactions() {
       
       try {
         console.log('[transaction] Borrowing from Aave...')
-        writeContract({
+        const borrowHash = await writeContract({
           address: AAVE_V3_POOL_ADDRESS,
           abi: AAVE_V3_POOL_ABI,
           functionName: 'borrow',
           args: [token.address, amountWei, 2, 0, address]
         })
-        console.log('[transaction] Borrow transaction submitted')
-        
-        const mockHash = `0x${Math.random().toString(16).substr(2, 64)}` as `0x${string}`
+        console.log('[transaction] Borrow hash:', borrowHash)
         
         return {
-          hash: mockHash,
+          hash: borrowHash,
           action: 'borrow',
           amount,
           token: token.symbol,
@@ -319,6 +315,7 @@ export function useAaveTransactions() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['aave-data'] })
       queryClient.invalidateQueries({ queryKey: ['token-balances'] })
+      queryClient.invalidateQueries({ queryKey: ['portfolio-data'] })
     },
   })
 
@@ -334,18 +331,16 @@ export function useAaveTransactions() {
       
       try {
         console.log('[transaction] Repaying to Aave...')
-        writeContract({
+        const repayHash = await writeContract({
           address: AAVE_V3_POOL_ADDRESS,
           abi: AAVE_V3_POOL_ABI,
           functionName: 'repay',
           args: [token.address, amountWei, 2, address]
         })
-        console.log('[transaction] Repay transaction submitted')
-        
-        const mockHash = `0x${Math.random().toString(16).substr(2, 64)}` as `0x${string}`
+        console.log('[transaction] Repay hash:', repayHash)
         
         return {
-          hash: mockHash,
+          hash: repayHash,
           action: 'repay',
           amount,
           token: token.symbol,
@@ -359,6 +354,7 @@ export function useAaveTransactions() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['aave-data'] })
       queryClient.invalidateQueries({ queryKey: ['token-balances'] })
+      queryClient.invalidateQueries({ queryKey: ['portfolio-data'] })
     },
   })
 
@@ -374,18 +370,16 @@ export function useAaveTransactions() {
       
       try {
         console.log('[transaction] Withdrawing from Aave...')
-        writeContract({
+        const withdrawHash = await writeContract({
           address: AAVE_V3_POOL_ADDRESS,
           abi: AAVE_V3_POOL_ABI,
           functionName: 'withdraw',
           args: [token.address, amountWei, address]
         })
-        console.log('[transaction] Withdraw transaction submitted')
-        
-        const mockHash = `0x${Math.random().toString(16).substr(2, 64)}` as `0x${string}`
+        console.log('[transaction] Withdraw hash:', withdrawHash)
         
         return {
-          hash: mockHash,
+          hash: withdrawHash,
           action: 'withdraw',
           amount,
           token: token.symbol,
@@ -399,6 +393,7 @@ export function useAaveTransactions() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['aave-data'] })
       queryClient.invalidateQueries({ queryKey: ['token-balances'] })
+      queryClient.invalidateQueries({ queryKey: ['portfolio-data'] })
     },
   })
 
