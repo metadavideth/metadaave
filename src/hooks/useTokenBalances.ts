@@ -60,6 +60,9 @@ async function fetchTokenBalance(
   }
 }
 
+// Helper function to add delay between requests
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+
 // Fetch all token balances for a user using Farcaster wallet
 async function fetchAllTokenBalances(farcasterWalletAddress: `0x${string}`, chainId?: string): Promise<Record<string, string>> {
   try {
@@ -76,25 +79,38 @@ async function fetchAllTokenBalances(farcasterWalletAddress: `0x${string}`, chai
 
     console.log('Fetching token balances for Farcaster wallet:', farcasterWalletAddress)
 
-          const balancePromises = AAVE_V3_BASE_TOKENS.map(async (token) => {
-            try {
-              console.log(`[balance] Attempting to fetch ${token.symbol} from ${token.address}`)
-              const balance = await fetchTokenBalance(token.address, farcasterWalletAddress, token.decimals || 18)
-              console.log(`[balance] ✅ ${token.symbol}: ${balance}`)
-              return { address: token.address, balance }
-            } catch (err: any) {
-              if (String(err?.name || '').includes('ContractFunctionZeroDataError')) {
-                // Skip token silently - contract doesn't exist
-                console.warn(`[balance] ❌ Skipping token ${token.symbol} (${token.address}) - contract not found`)
-                return null;
-              }
-              // Surface real errors
-              console.error(`[balance] ❌ Error fetching ${token.symbol}:`, err)
-              throw err;
-            }
-          })
-
-    const results = await Promise.all(balancePromises)
+    // Process tokens sequentially with delays to avoid rate limiting
+    const results: Array<{ address: string; balance: string } | null> = []
+    
+    for (let i = 0; i < AAVE_V3_BASE_TOKENS.length; i++) {
+      const token = AAVE_V3_BASE_TOKENS[i]
+      
+      try {
+        console.log(`[balance] Attempting to fetch ${token.symbol} from ${token.address}`)
+        const balance = await fetchTokenBalance(token.address, farcasterWalletAddress, token.decimals || 18)
+        console.log(`[balance] ✅ ${token.symbol}: ${balance}`)
+        results.push({ address: token.address, balance })
+      } catch (err: any) {
+        if (String(err?.name || '').includes('ContractFunctionZeroDataError')) {
+          // Skip token silently - contract doesn't exist
+          console.warn(`[balance] ❌ Skipping token ${token.symbol} (${token.address}) - contract not found`)
+          results.push(null)
+        } else if (err.message?.includes('429') || err.message?.includes('rate limit')) {
+          // Handle rate limiting gracefully
+          console.warn(`[balance] ⚠️ Rate limited for ${token.symbol}, using 0 balance`)
+          results.push({ address: token.address, balance: '0' })
+        } else {
+          // Surface real errors
+          console.error(`[balance] ❌ Error fetching ${token.symbol}:`, err)
+          results.push({ address: token.address, balance: '0' })
+        }
+      }
+      
+      // Add delay between requests to avoid rate limiting (except for last token)
+      if (i < AAVE_V3_BASE_TOKENS.length - 1) {
+        await delay(200) // 200ms delay between requests
+      }
+    }
     
     return results
       .filter((result): result is { address: string; balance: string } => result !== null)
@@ -117,8 +133,8 @@ export function useTokenBalances(farcasterWalletAddress?: `0x${string}`, chainId
       return fetchAllTokenBalances(farcasterWalletAddress!, chainId!)
     },
     enabled: !!farcasterWalletAddress && !!chainId,
-    staleTime: 30000, // 30 seconds - same as Aave data
-    refetchInterval: 60000, // Refetch every 60 seconds - same as Aave data
+    staleTime: 60000, // 60 seconds - longer cache time
+    refetchInterval: 120000, // Refetch every 2 minutes - less frequent to avoid rate limits
     retry: false, // Prevent retry loops
     refetchOnWindowFocus: false, // Prevent refetch on focus
   })
