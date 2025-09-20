@@ -29,6 +29,12 @@ export function ActionTabs({ onTransactionSuccess, selectedToken }: ActionTabsPr
     }
   }, [selectedToken])
 
+  // Reset amount when switching between action types
+  useEffect(() => {
+    setAmount("")
+    setFee("0.00")
+  }, [activeTab])
+
   const tabs = [
     { id: "supply", label: "Supply", color: "text-green-500" },
     { id: "borrow", label: "Borrow", color: "text-blue-400" },
