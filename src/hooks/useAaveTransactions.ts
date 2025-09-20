@@ -152,15 +152,10 @@ async function getFarcasterWalletClient(address: string) {
       return createMockWalletClient(address as `0x${string}`)
     }
 
-    // In real Farcaster environment, create actual wallet client
-    console.log('[wallet-client] Creating real wallet client')
-    const walletClient = createWalletClient({
-      chain: base,
-      transport: http(),
-      account: address as `0x${string}`,
-    })
-    console.log('[wallet-client] Wallet client created successfully')
-    return walletClient
+    // In real Farcaster environment, we need to use the Farcaster SDK for transactions
+    // For now, return a mock client since we don't have the proper Farcaster transaction setup
+    console.log('[wallet-client] Using mock client for real environment (Farcaster SDK integration needed)')
+    return createMockWalletClient(address as `0x${string}`)
   } catch (error) {
     console.error('Failed to create Farcaster wallet client:', error)
     throw new Error(`Failed to initialize wallet: ${error instanceof Error ? error.message : 'Unknown error'}`)
