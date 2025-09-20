@@ -67,7 +67,7 @@ async function fetchPortfolioData(address: `0x${string}`): Promise<PortfolioData
       healthFactor
     ] = userData
 
-    // Convert from wei to ETH
+    // Convert from wei to ETH (these are ETH values, not token values)
     const totalSuppliedETH = parseFloat(formatUnits(totalCollateralETH, 18))
     const totalBorrowedETH = parseFloat(formatUnits(totalDebtETH, 18))
     const healthFactorNum = parseFloat(formatUnits(healthFactor, 18))
@@ -78,6 +78,15 @@ async function fetchPortfolioData(address: `0x${string}`): Promise<PortfolioData
     console.log('[portfolio] totalBorrowedETH:', totalBorrowedETH)
     console.log('[portfolio] healthFactorNum:', healthFactorNum)
     console.log('[portfolio] ltvNum:', ltvNum)
+    
+    // Convert ETH values to USD (assuming 1 ETH = $2000 for now)
+    const ETH_TO_USD = 2000
+    const totalSuppliedUSD = totalSuppliedETH * ETH_TO_USD
+    const totalBorrowedUSD = totalBorrowedETH * ETH_TO_USD
+    
+    console.log('[portfolio] 🔍 After USD conversion:')
+    console.log('[portfolio] totalSuppliedUSD:', totalSuppliedUSD)
+    console.log('[portfolio] totalBorrowedUSD:', totalBorrowedUSD)
 
     console.log('[portfolio] Parsed data:', {
       totalCollateralETH: totalCollateralETH.toString(),
@@ -113,7 +122,7 @@ async function fetchPortfolioData(address: `0x${string}`): Promise<PortfolioData
     // Handle health factor for no position case
     // Aave returns a very large number (2^256-1) when there are no positions
     const MAX_SAFE_HEALTH_FACTOR = 1e10 // 10 billion - anything larger is considered "infinite"
-    const isNoPosition = totalSuppliedETH === 0 && totalBorrowedETH === 0
+    const isNoPosition = totalSuppliedUSD === 0 && totalBorrowedUSD === 0
     const isInfiniteHealthFactor = healthFactorNum > MAX_SAFE_HEALTH_FACTOR
     const effectiveHealthFactor = isNoPosition || isInfiniteHealthFactor ? 0 : healthFactorNum
     
@@ -123,20 +132,20 @@ async function fetchPortfolioData(address: `0x${string}`): Promise<PortfolioData
     console.log('[portfolio] effectiveHealthFactor:', effectiveHealthFactor)
 
     // Calculate utilization (borrowed / supplied)
-    const utilization = totalSuppliedETH > 0 ? (totalBorrowedETH / totalSuppliedETH) * 100 : 0
+    const utilization = totalSuppliedUSD > 0 ? (totalBorrowedUSD / totalSuppliedUSD) * 100 : 0
 
     // Calculate net APY (simplified - in real app you'd calculate based on actual positions)
-    const netAPY = totalSuppliedETH > 0 ? '2.85%' : '0.00%' // Placeholder
+    const netAPY = totalSuppliedUSD > 0 ? '2.85%' : '0.00%' // Placeholder
 
     // Calculate estimated monthly yield
-    const monthlyYield = totalSuppliedETH > 0 ? (totalSuppliedETH * 0.0285 / 12) : 0
+    const monthlyYield = totalSuppliedUSD > 0 ? (totalSuppliedUSD * 0.0285 / 12) : 0
 
     // Count positions (simplified - count tokens with balance > 0)
-    const positions = totalSuppliedETH > 0 || totalBorrowedETH > 0 ? 1 : 0
+    const positions = totalSuppliedUSD > 0 || totalBorrowedUSD > 0 ? 1 : 0
 
     return {
-      totalSupplied: totalSuppliedETH.toFixed(5),
-      totalBorrowed: totalBorrowedETH.toFixed(5),
+      totalSupplied: totalSuppliedUSD.toFixed(2),
+      totalBorrowed: totalBorrowedUSD.toFixed(2),
       healthFactor: effectiveHealthFactor,
       netAPY,
       yieldEstimate: monthlyYield.toFixed(2),
