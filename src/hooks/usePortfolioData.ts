@@ -4,6 +4,7 @@ import { createPublicClient, http, formatUnits, parseUnits } from 'viem'
 import { base } from 'viem/chains'
 import { AAVE_V3_BASE_TOKENS } from '../data/tokens'
 import { useAaveData } from './useAaveData'
+import { useTokenBalances } from './useTokenBalances'
 
 // Aave V3 Pool ABI - minimal for user data
 const AAVE_POOL_ABI = [
@@ -32,6 +33,51 @@ const publicClient = createPublicClient({
   transport: http()
 })
 
+// Function to calculate weighted average APY based on token positions
+function calculateWeightedAPY(tokenBalances: Record<string, string>, aaveData: any[]): string {
+  if (!aaveData || Object.keys(tokenBalances).length === 0) {
+    return '0.00%'
+  }
+
+  let totalValueUSD = 0
+  let weightedAPYSum = 0
+
+  // Calculate weighted average APY
+  for (const [tokenAddress, balance] of Object.entries(tokenBalances)) {
+    const balanceNum = parseFloat(balance)
+    if (balanceNum <= 0) continue
+
+    // Find the token data in Aave reserves
+    const tokenData = aaveData.find(reserve => 
+      reserve.underlyingAsset.toLowerCase() === tokenAddress.toLowerCase()
+    )
+
+    if (tokenData) {
+      // For now, we'll use a simple approach - in reality, we'd need to:
+      // 1. Get the actual aToken balance (aUSDbC, aUSDC, etc.)
+      // 2. Convert to USD value using token prices
+      // 3. Calculate weighted average
+      
+      // Since we don't have individual token positions yet, we'll use the total supplied amount
+      // and assume it's all in the token with the highest APY for now
+      const apyValue = tokenData.supplyAPY
+      const tokenValueUSD = balanceNum // This should be converted to USD using price
+      
+      totalValueUSD += tokenValueUSD
+      weightedAPYSum += apyValue * tokenValueUSD
+      
+      console.log(`[portfolio] Token ${tokenData.symbol}: ${balance} balance, ${apyValue}% APY`)
+    }
+  }
+
+  if (totalValueUSD === 0) {
+    return '0.00%'
+  }
+
+  const weightedAPY = weightedAPYSum / totalValueUSD
+  return `${weightedAPY.toFixed(2)}%`
+}
+
 interface PortfolioData {
   totalSupplied: string
   totalBorrowed: string
@@ -45,7 +91,7 @@ interface PortfolioData {
   error: string | null
 }
 
-async function fetchPortfolioData(address: `0x${string}`, aaveData?: any[]): Promise<PortfolioData> {
+async function fetchPortfolioData(address: `0x${string}`, aaveData?: any[], tokenBalances?: Record<string, string>): Promise<PortfolioData> {
   try {
     console.log('[portfolio] Fetching data for address:', address)
     
@@ -130,19 +176,24 @@ async function fetchPortfolioData(address: `0x${string}`, aaveData?: any[]): Pro
     // Calculate utilization
     const utilization = (totalSuppliedUSD > 0 && totalBorrowedUSD > 0) ? (totalBorrowedUSD / totalSuppliedUSD) * 100 : 0
     
-    // Calculate net APY based on real Aave data
+    // Calculate net APY based on real Aave data and user positions
     let netAPY = '0.00%'
-    if (totalSuppliedUSD > 0 && aaveData) {
-      // Find USDbC APY from Aave data (since user supplied USDbC)
+    if (totalSuppliedUSD > 0 && aaveData && tokenBalances) {
+      // Calculate weighted average APY based on actual token positions
+      netAPY = calculateWeightedAPY(tokenBalances, aaveData)
+      console.log('[portfolio] Calculated weighted APY:', netAPY)
+    } else if (totalSuppliedUSD > 0 && aaveData) {
+      // Fallback: Since we know the user has USDbC supplied, use that APY
       const usdbcData = aaveData.find(reserve => 
         reserve.underlyingAsset.toLowerCase() === '0xd9aAEc86B65D86f6A7B5B1b0c42FFA531710b6CA'.toLowerCase()
       )
+      
       if (usdbcData) {
         netAPY = `${usdbcData.supplyAPY.toFixed(2)}%`
-        console.log('[portfolio] Using real USDbC APY:', netAPY)
+        console.log('[portfolio] Using USDbC APY (fallback):', netAPY)
       } else {
-        netAPY = '3.80%' // Fallback to current USDbC APY
-        console.log('[portfolio] Using fallback APY:', netAPY)
+        netAPY = '3.80%' // Final fallback
+        console.log('[portfolio] Using final fallback APY:', netAPY)
       }
     }
     
@@ -199,10 +250,11 @@ async function fetchPortfolioData(address: `0x${string}`, aaveData?: any[]): Pro
 export function usePortfolioData() {
   const { address, isConnected } = useAccount()
   const { data: aaveData } = useAaveData()
+  const { data: tokenBalances } = useTokenBalances(address, '0x2105') // Base mainnet
 
   return useQuery({
     queryKey: ['portfolio-data', address],
-    queryFn: () => fetchPortfolioData(address!, aaveData),
+    queryFn: () => fetchPortfolioData(address!, aaveData, tokenBalances),
     enabled: !!address && isConnected,
     staleTime: 60000, // 1 minute - reasonable cache time
     refetchInterval: 300000, // 5 minutes - much less frequent to avoid rate limits
